@@ -1,7 +1,5 @@
 /*
- * OpenSprinkler Modern Theme — Design Proposal
- * A clean, functional redesign layered on top of jQuery Mobile.
- * All changes are purely cosmetic — no functionality is altered.
+ * OpenSprinkler Modern Theme — HomeKit-inspired tile design
  */
 
 /* ============================================================
@@ -12,31 +10,31 @@
   --os-primary:        #27AE60;
   --os-primary-dark:   #1E8449;
   --os-primary-light:  #EAFAF1;
-  --os-accent:         #2980B9;
 
-  --os-bg:             #F0F2F5;
+  --os-running-from:   #2ECC71;
+  --os-running-to:     #1A9150;
+  --os-sched-from:     #F5A623;
+  --os-sched-to:       #D4880A;
+
+  --os-bg:             #F2F2F7;
   --os-card-bg:        #FFFFFF;
-  --os-border:         #E4E8EE;
+  --os-border:         rgba(0,0,0,0.08);
 
-  --os-text:           #1A2332;
-  --os-text-secondary: #5A6475;
-  --os-text-muted:     #9AA3B0;
+  --os-text:           #1C1C1E;
+  --os-text-secondary: #3C3C43;
+  --os-text-muted:     #8E8E93;
 
-  --os-shadow-sm:      0 1px 4px rgba(0,0,0,0.06);
-  --os-shadow-md:      0 2px 10px rgba(0,0,0,0.09);
-  --os-shadow-lg:      0 6px 24px rgba(0,0,0,0.12);
+  --os-shadow-sm:      0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --os-shadow-md:      0 4px 12px rgba(0,0,0,0.08);
+  --os-shadow-lg:      0 8px 28px rgba(0,0,0,0.14);
 
-  --os-radius-sm:      8px;
-  --os-radius-md:      12px;
-  --os-radius-lg:      16px;
-
-  --os-status-on:      #27AE60;
-  --os-status-wait:    #F39C12;
-  --os-status-off:     #CBD0D8;
+  --os-radius-sm:      10px;
+  --os-radius-md:      14px;
+  --os-radius-lg:      18px;
+  --os-radius-xl:      22px;
 
   --os-font:           -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
                        'Helvetica Neue', Arial, sans-serif;
-  --os-font-mono:      'SF Mono', SFMono-Regular, 'Fira Code', monospace;
 }
 
 /* ============================================================
@@ -50,9 +48,7 @@ body,
   color: var(--os-text) !important;
 }
 
-* {
-  -webkit-tap-highlight-color: transparent;
-}
+* { -webkit-tap-highlight-color: transparent; }
 
 /* ============================================================
    HEADER
@@ -60,11 +56,13 @@ body,
 
 .ui-header,
 .ui-header.ui-bar-a {
-  background: #FFFFFF !important;
+  background: rgba(255,255,255,0.92) !important;
   background-image: none !important;
   border: none !important;
   border-bottom: 1px solid var(--os-border) !important;
   box-shadow: var(--os-shadow-sm) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
 .ui-header .ui-title {
@@ -73,7 +71,6 @@ body,
   font-weight: 700 !important;
   letter-spacing: -0.3px !important;
   text-shadow: none !important;
-  margin-left: 0.5em !important;
 }
 
 .ui-header .ui-btn,
@@ -87,7 +84,7 @@ body,
 }
 
 /* ============================================================
-   ACCENT / ACTIVE COLOR
+   ACCENT / ACTIVE COLOUR
    ============================================================ */
 
 .ui-selectmenu-list .activeButton,
@@ -108,33 +105,28 @@ button.ui-btn-active {
 
 .ui-content {
   padding: 12px 14px !important;
-  max-width: 600px;
+  max-width: 680px;
 }
 
 /* ============================================================
-   INFO CARD (top weather + site block)
+   INFO CARD (weather + site name)
    ============================================================ */
 
 .info-card {
   background: var(--os-card-bg) !important;
-  border-radius: var(--os-radius-md) !important;
+  border-radius: var(--os-radius-lg) !important;
   border: 1px solid var(--os-border) !important;
-  box-shadow: var(--os-shadow-md) !important;
-  margin: 0 auto 14px !important;
-  max-width: 560px;
+  box-shadow: var(--os-shadow-sm) !important;
+  margin: 0 auto 16px !important;
+  max-width: 640px;
   padding: 14px 16px !important;
   min-height: unset !important;
-}
-
-.info-card > div {
-  transition: opacity 0.15s ease !important;
 }
 
 .sitename {
   font-size: 15px !important;
   font-weight: 700 !important;
   color: var(--os-text) !important;
-  padding-bottom: 4px !important;
 }
 
 #clock-s {
@@ -155,159 +147,240 @@ button.ui-btn-active {
 }
 
 /* ============================================================
-   STATION CARDS
+   STATION GRID
+   ============================================================ */
+
+#os-stations-list,
+#os-running-stations {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+  max-width: 640px;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+/* ============================================================
+   HOMEKIT TILE  (.card)
    ============================================================ */
 
 .card {
-  background: var(--os-card-bg) !important;
-  border-radius: var(--os-radius-md) !important;
-  border: 1px solid var(--os-border) !important;
-  box-shadow: var(--os-shadow-md) !important;
-  margin: 0 auto 10px !important;
-  max-width: 560px;
+  border-radius: var(--os-radius-xl) !important;
+  border: none !important;
+  box-shadow: var(--os-shadow-sm) !important;
+  margin: 0 !important;
   padding: 0 !important;
-  cursor: pointer;
-  transition: box-shadow 0.18s ease, transform 0.18s ease !important;
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease !important;
+  position: relative;
 }
 
 .card:active {
+  transform: scale(0.95) !important;
   box-shadow: var(--os-shadow-lg) !important;
-  transform: scale(0.985) !important;
 }
 
-.card > .ui-body,
-.card > .ui-body-a {
+/* Idle tile */
+.card.idle {
+  background: var(--os-card-bg) !important;
+}
+
+/* Running tile — green gradient */
+.card.running {
+  background: linear-gradient(150deg, var(--os-running-from), var(--os-running-to)) !important;
+}
+
+/* Scheduled / waiting tile — amber gradient */
+.card.scheduled {
+  background: linear-gradient(150deg, var(--os-sched-from), var(--os-sched-to)) !important;
+}
+
+/* ── Tile inner container ─────────────────────────────────── */
+
+.tile-inner.ui-body,
+.tile-inner.ui-body-a {
   background: transparent !important;
   border: none !important;
-  padding: 14px 16px !important;
-  min-height: 56px !important;
+  padding: 14px 14px 12px !important;
+  min-height: 128px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
 }
 
-/* Running station: green left-border accent */
-.card:has(.station-status.on) {
-  border-left: 3px solid var(--os-status-on) !important;
+/* ── Row 1: icon + gear ───────────────────────────────────── */
+
+.tile-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
 }
 
-/* Scheduled station: amber left-border accent */
-.card:has(.station-status.wait) {
-  border-left: 3px solid var(--os-status-wait) !important;
+/* Icon pill */
+.tile-icon-pill {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-/* ============================================================
-   STATION NAME
-   ============================================================ */
-
-.station-name {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: var(--os-text) !important;
-  letter-spacing: -0.15px !important;
-  width: 70% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap;
-  display: block;
-  margin: 4px auto 0 !important;
+.card.idle .tile-icon-pill {
+  background: var(--os-primary-light);
+  color: var(--os-primary);
 }
 
-/* ============================================================
-   STATUS INDICATOR
-   ============================================================ */
-
-.station-status {
-  top: 10px !important;
-  left: 12px !important;
+.card.running .tile-icon-pill,
+.card.scheduled .tile-icon-pill {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
 }
 
-.station-status:after {
-  width: 10px !important;
-  height: 10px !important;
+.tile-icon-pill svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Gear button inside tile (re-uses .station-settings jQM element) */
+.station-settings.tile-gear-btn {
+  position: static !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   border-radius: 50% !important;
-  border: none !important;
-  display: block;
+  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-.station-status.on:after {
-  background-color: var(--os-status-on) !important;
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.18) !important;
+.card.idle .station-settings.tile-gear-btn {
+  background: rgba(0,0,0,0.05) !important;
+  color: var(--os-text-muted) !important;
 }
 
-.station-status.wait:after {
-  background-color: var(--os-status-wait) !important;
-  box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.18) !important;
+.card.running .station-settings.tile-gear-btn,
+.card.scheduled .station-settings.tile-gear-btn {
+  background: rgba(255,255,255,0.18) !important;
+  color: rgba(255,255,255,0.8) !important;
 }
 
-.station-status.off:after {
-  background-color: var(--os-status-off) !important;
-  box-shadow: none !important;
+/* ── Row 2: mid content ───────────────────────────────────── */
+
+.tile-row-mid {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 0 4px;
 }
 
-/* ============================================================
-   REMAINING TIME
-   ============================================================ */
+/* Circular progress ring */
+.ring-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.rem {
+.tile-ring {
+  position: absolute;
+  top: 0; left: 0;
+  width: 64px;
+  height: 64px;
+}
+
+.ring-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.25);
+  stroke-width: 3;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 28px 28px;
+  transition: stroke-dashoffset 1s linear;
+}
+
+/* Compact time centred inside the ring */
+.ring-time {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.3px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Big remaining time — manual / no-ring stations */
+.tile-time-big {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.8px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* Scheduled start label */
+.tile-sched-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.92);
+  text-align: center;
+  line-height: 1.35;
+}
+
+/* Idle last-run label */
+.tile-last-run.station-last-run {
   font-size: 12px !important;
   color: var(--os-text-muted) !important;
-  font-family: var(--os-font-mono) !important;
-  padding-top: 4px !important;
+  text-align: center;
+  line-height: 1.35;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 14px;
 }
 
-/* ============================================================
-   CARD ICONS (settings gear, wifi, group)
-   ============================================================ */
+/* ── Row 3: station name ──────────────────────────────────── */
 
-.station-settings {
-  top: 8px !important;
-  right: 10px !important;
-  opacity: 0.45;
+.tile-row-bot { margin-top: auto; }
+
+.station-name.tile-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.2px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  width: auto !important;
 }
 
-.station-settings:hover,
-.station-settings:focus {
-  opacity: 0.85;
-}
-
-.special-station {
-  top: 8px !important;
-  right: 10px !important;
-  margin-right: 36px !important;
-  opacity: 0.5;
-}
-
-.station-gid {
-  top: 6px !important;
-  right: 10px !important;
-  margin-right: 52px !important;
-  font-size: 11px !important;
-  color: var(--os-text-muted) !important;
-}
-
-/* ============================================================
-   CARD GROUP
-   ============================================================ */
-
-.card-group {
-  padding: 0 2px !important;
-}
-
-/* Two-column grid on wider screens */
-@media (min-width: 640px) {
-  #os-stations-list,
-  #os-running-stations {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
-    column-count: unset !important;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .card {
-    margin: 0 !important;
-  }
-}
+.card.idle .tile-name        { color: var(--os-text) !important; }
+.card.running .tile-name,
+.card.scheduled .tile-name   { color: rgba(255,255,255,0.95) !important; }
 
 /* ============================================================
    GENERAL BUTTONS
@@ -318,7 +391,6 @@ button.ui-btn-active {
   text-shadow: none !important;
   border-radius: var(--os-radius-sm) !important;
   font-size: 14px !important;
-  letter-spacing: -0.1px;
 }
 
 .ui-btn-active,
@@ -335,15 +407,15 @@ a.ui-btn-active {
 
 .ui-footer,
 #footer-running.ui-bar {
-  background: #FFFFFF !important;
+  background: rgba(255,255,255,0.92) !important;
   border-top: 1px solid var(--os-border) !important;
   box-shadow: none !important;
   text-shadow: none !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
 }
 
-#footer-running.ui-bar {
-  color: var(--os-text) !important;
-}
+#footer-running.ui-bar { color: var(--os-text) !important; }
 
 /* ============================================================
    POPUPS & DIALOGS
@@ -363,13 +435,8 @@ a.ui-btn-active {
    LIST ITEMS
    ============================================================ */
 
-.ui-listview > li {
-  border-bottom: 1px solid var(--os-border) !important;
-}
-
-.ui-listview > li:last-child {
-  border-bottom: none !important;
-}
+.ui-listview > li { border-bottom: 1px solid var(--os-border) !important; }
+.ui-listview > li:last-child { border-bottom: none !important; }
 
 /* ============================================================
    COLLAPSIBLES
@@ -385,21 +452,15 @@ a.ui-btn-active {
 }
 
 /* ============================================================
-   SLIDERS
+   SLIDERS / INPUTS
    ============================================================ */
 
-.ui-slider-track {
-  border-radius: 99px !important;
-}
+.ui-slider-track { border-radius: 99px !important; }
 
 .ui-slider-handle {
   border-radius: 50% !important;
   box-shadow: var(--os-shadow-md) !important;
 }
-
-/* ============================================================
-   INPUT FIELDS
-   ============================================================ */
 
 .ui-input-text input,
 .ui-input-search input {
@@ -413,69 +474,19 @@ a.ui-btn-active {
 .ui-input-search input:focus {
   border-color: var(--os-primary) !important;
   outline: none !important;
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15) !important;
-}
-
-/* ============================================================
-   STATION IMAGES (when enabled)
-   ============================================================ */
-
-.has-images .card img {
-  border-radius: var(--os-radius-sm) !important;
-  object-fit: cover;
+  box-shadow: 0 0 0 3px rgba(39,174,96,0.15) !important;
 }
 
 /* ============================================================
    SCROLLBARS (webkit)
    ============================================================ */
 
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: var(--os-border);
-  border-radius: 99px;
-}
-
-/* ============================================================
-   PROGRESS BAR (running stations)
-   ============================================================ */
-
-.station-progress-wrap {
-  height: 4px;
-  background: var(--os-border);
-  border-radius: 0 0 var(--os-radius-md) var(--os-radius-md);
-  overflow: hidden;
-  margin: 8px -16px -14px -16px;
-}
-
-.station-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--os-primary), #52d68a);
-  border-radius: 0 0 var(--os-radius-md) var(--os-radius-md);
-  transition: width 1s linear;
-}
-
-/* ============================================================
-   LAST RUN LABEL (idle stations)
-   ============================================================ */
-
-.station-last-run {
-  font-size: 11px !important;
-  color: var(--os-text-muted) !important;
-  margin: 4px 0 0 !important;
-  padding: 0 !important;
-  min-height: 14px;
-}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--os-border); border-radius: 99px; }
 
 /* ============================================================
    DISABLED / HIDDEN STATIONS
    ============================================================ */
 
-.station-hidden {
-  opacity: 0.4 !important;
-}
+.station-hidden { opacity: 0.4 !important; }
