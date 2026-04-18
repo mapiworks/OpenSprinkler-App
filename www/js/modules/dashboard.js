@@ -20,7 +20,8 @@ OSApp.Dashboard = OSApp.Dashboard || {};
 OSApp.Dashboard.displayPage = function() {
 	// Display the home dasbhoard main view
 	var cards, siteSelect, currentSite, i, sites,
-		lastRunByStation = {};
+		lastRunByStation = {},
+		stationInitialRem = {};
 
 	// Fetch recent log entries and build a per-station last-run map
 	function fetchLastRun() {
@@ -75,17 +76,59 @@ OSApp.Dashboard.displayPage = function() {
 	}
 
 	// Calculate progress percentage for a running station (0-100).
-	// ps[sid][1] = actual remaining seconds (from firmware, live)
-	// ps[sid][2] = Unix timestamp when the station started (from firmware)
-	// Both are available — use them directly for accurate, reload-safe progress.
+	// Tries multiple sources in priority order so progress works for both
+	// scheduled program runs and manual runs.
 	function getRunProgress( sid ) {
-		var startTime = OSApp.Stations.getStartTime( sid );
 		var rem = OSApp.Stations.getRemainingRuntime( sid );
-		if ( !startTime || startTime <= 0 || rem <= 0 ) { return 0; }
-		var nowSec = Math.floor( Date.now() / 1000 );
-		var elapsed = Math.max( 0, nowSec - startTime );
-		var total = elapsed + rem;
-		return total > 0 ? Math.min( 100, Math.round( elapsed / total * 100 ) ) : 0;
+		if ( rem <= 0 ) { return 0; }
+
+		// Source 1: Firmware start timestamp — most accurate, but 0 for manual
+		// runs on firmware 2.4.0.
+		var startTime = OSApp.Stations.getStartTime( sid );
+		if ( startTime > 0 ) {
+			var nowSec = Math.floor( Date.now() / 1000 );
+			var elapsed = Math.max( 0, nowSec - startTime );
+			var total = elapsed + rem;
+			return total > 0 ? Math.min( 100, Math.round( elapsed / total * 100 ) ) : 0;
+		}
+
+		// Source 2: Program duration table — works when a scheduled program is
+		// running (PID is a real program index, not 99/255 manual or 98/254 run-once).
+		var pid = OSApp.Stations.getPID( sid );
+		if ( pid > 0 && pid !== 99 && pid !== 255 && pid !== 98 && pid !== 254 ) {
+			var pd = OSApp.currentSession.controller.programs && OSApp.currentSession.controller.programs.pd;
+			if ( pd && pd[ pid - 1 ] && pd[ pid - 1 ][ 4 ] ) {
+				var rawDur = pd[ pid - 1 ][ 4 ][ sid ];
+				var progTotal = OSApp.Stations.getStationDuration( rawDur );
+				if ( progTotal > 0 ) {
+					var progElapsed = Math.max( 0, progTotal - rem );
+					return Math.min( 100, Math.round( progElapsed / progTotal * 100 ) );
+				}
+			}
+		}
+
+		// Source 3: Duration saved in local storage from the last manual run
+		// of this station (set when the user taps a station and enters a duration).
+		if ( sites && currentSite && sites[ currentSite ] && sites[ currentSite ].lastRunTime ) {
+			var savedDur = sites[ currentSite ].lastRunTime[ sid ];
+			if ( savedDur > 0 ) {
+				var savedElapsed = Math.max( 0, savedDur - rem );
+				return Math.min( 100, Math.round( savedElapsed / savedDur * 100 ) );
+			}
+		}
+
+		// Fallback: snapshot rem at first detection on this page load.
+		// Not reload-safe (resets to 0 on refresh) but always shows some progress.
+		if ( !stationInitialRem[ sid ] ) {
+			stationInitialRem[ sid ] = rem;
+		}
+		var snapTotal = stationInitialRem[ sid ];
+		if ( snapTotal > 0 ) {
+			var snapElapsed = Math.max( 0, snapTotal - rem );
+			return Math.min( 100, Math.round( snapElapsed / snapTotal * 100 ) );
+		}
+
+		return 0;
 	}
 
 	// Actual remaining seconds for a running station, accounting for elapsed time
@@ -129,6 +172,10 @@ OSApp.Dashboard.displayPage = function() {
 			// Seed the countdown with the actual remaining time derived from
 			// the firmware start timestamp, so it's correct even on mid-run page loads.
 			var actualRem = getActualRemaining( station );
+			// Seed the snapshot fallback for getRunProgress before the first tick.
+			if ( !stationInitialRem[ station ] ) {
+				stationInitialRem[ station ] = actualRem;
+			}
 			OSApp.uiState.timers[ "station-" + station ] = {
 				val: actualRem,
 				station: station,
