@@ -124,6 +124,7 @@ window.currLocal = true;
 	// Insert main application stylesheet
 	insertStyleSheet( assetLocation + "css/jqm.css" );
 	insertStyleSheet( assetLocation + "css/main.css" );
+	insertStyleSheet( assetLocation + "css/modern.css" );
 	insertStyleSheet( assetLocation + "css/analog.css" );
 	insertStyleSheet( assetLocation + "css/vis-timeline-graph2d.min.css" );
 
