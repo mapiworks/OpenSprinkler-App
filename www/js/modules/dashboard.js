@@ -117,18 +117,28 @@ OSApp.Dashboard.displayPage = function() {
 			}
 		}
 
-		// Fallback: snapshot rem at first detection on this page load.
-		// Not reload-safe (resets to 0 on refresh) but always shows some progress.
-		if ( !stationInitialRem[ sid ] ) {
-			stationInitialRem[ sid ] = rem;
-		}
-		var snapTotal = stationInitialRem[ sid ];
-		if ( snapTotal > 0 ) {
-			var snapElapsed = Math.max( 0, snapTotal - rem );
-			return Math.min( 100, Math.round( snapElapsed / snapTotal * 100 ) );
-		}
+		// No valid source — caller should not show a progress ring.
+		return -1;
+	}
 
-		return 0;
+	// Returns true when a circular progress ring should be shown for this station.
+	// Manual PIDs (99/255) and run-once PIDs (98/254) don't show a ring even when
+	// Source 3 is available, because the user expects them to show only remaining time.
+	function canShowRing( sid ) {
+		var pid = OSApp.Stations.getPID( sid );
+		if ( pid === 99 || pid === 255 || pid === 98 || pid === 254 ) { return false; }
+		return getRunProgress( sid ) >= 0;
+	}
+
+	// Compact HH:MM or M:SS label used inside the progress ring.
+	function compactTime( sec ) {
+		var h = Math.floor( sec / 3600 );
+		var m = Math.floor( ( sec % 3600 ) / 60 );
+		var s = sec % 60;
+		if ( h > 0 ) {
+			return h + ":" + ( m < 10 ? "0" : "" ) + m;
+		}
+		return m + ":" + ( s < 10 ? "0" : "" ) + s;
 	}
 
 	// Actual remaining seconds for a running station, accounting for elapsed time
@@ -143,6 +153,26 @@ OSApp.Dashboard.displayPage = function() {
 		var total = rem + elapsed; // total = original duration
 		return Math.max( 0, total - elapsed );
 	}
+	// ── HomeKit tile constants ──────────────────────────────────────────────
+	var RING_R    = 22;
+	var RING_CIRC = parseFloat( ( 2 * Math.PI * RING_R ).toFixed( 2 ) ); // 138.23
+
+	// Feather-style SVG icons (stroke-based, currentColor)
+	var ICON_HAND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+		'<path d="M18 11V6a2 2 0 0 0-4 0v5"/>' +
+		'<path d="M14 10V4a2 2 0 0 0-4 0v6"/>' +
+		'<path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>' +
+		'<path d="M6 14a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4v-2.5"/></svg>';
+
+	var ICON_CAL  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+		'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>' +
+		'<line x1="16" y1="2" x2="16" y2="6"/>' +
+		'<line x1="8" y1="2" x2="8" y2="6"/>' +
+		'<line x1="3" y1="10" x2="21" y2="10"/></svg>';
+
+	var ICON_DROP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+		'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>';
+
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
@@ -172,60 +202,61 @@ OSApp.Dashboard.displayPage = function() {
 			// Seed the countdown with the actual remaining time derived from
 			// the firmware start timestamp, so it's correct even on mid-run page loads.
 			var actualRem = getActualRemaining( station );
-			// Seed the snapshot fallback for getRunProgress before the first tick.
-			if ( !stationInitialRem[ station ] ) {
-				stationInitialRem[ station ] = actualRem;
-			}
 			OSApp.uiState.timers[ "station-" + station ] = {
 				val: actualRem,
 				station: station,
 				update: function() {
-					page.find( "#countdown-" + station ).text( "(" + OSApp.Dates.sec2hms( this.val ) + " " + OSApp.Language._( "remaining" ) + ")" );
-					// Update progress bar using firmware start time
-					var pct = getRunProgress( station );
-					page.find( "#progress-" + station ).css( "width", pct + "%" );
+					var useRing = canShowRing( station );
+					if ( useRing ) {
+						var pct = getRunProgress( station );
+						var offset = ( RING_CIRC * ( 1 - pct / 100 ) ).toFixed( 2 );
+						page.find( "#progress-" + station ).attr( "stroke-dashoffset", offset );
+						page.find( "#countdown-" + station ).text( compactTime( this.val ) );
+					} else {
+						page.find( "#countdown-" + station ).text( OSApp.Dates.sec2hms( this.val ) );
+					}
 				},
 				done: function() {
-					page.find( "#countdown-" + station ).parent( "p" ).empty().siblings( ".station-status" ).removeClass( "on" ).addClass( "off" );
-					page.find( "#progress-" + station ).closest( ".station-progress-wrap" ).remove();
+					var card = page.find( "[data-station='" + station + "']" ).first();
+					card.find( ".station-status" ).removeClass( "on" ).addClass( "off" );
+					card.find( ".tile-row-mid" ).html(
+						"<span class='station-last-run tile-last-run'>" +
+						( lastRunByStation[ station ] ? formatLastRun( lastRunByStation[ station ] ) : "" ) +
+						"</span>"
+					);
+					card.find( ".tile-icon-pill" ).html( ICON_DROP );
+					card.removeClass( "running scheduled" ).addClass( "idle" );
 				}
 			};
 		},
 		addCard = function( sid ) {
 			var isScheduled = OSApp.Stations.getPID( sid ) > 0,
 				isRunning = OSApp.Stations.isRunning( sid ),
-				pname = isScheduled ? OSApp.Programs.pidToName( OSApp.Stations.getPID( sid ) ) : "",
+				pid = OSApp.Stations.getPID( sid ),
+				isManual = ( pid === 99 || pid === 255 ),
 				rem = OSApp.Stations.getRemainingRuntime( sid ),
-				qPause = OSApp.Supported.pausing() && OSApp.StationQueue.isPaused(),
-				hasImage = sites[ currentSite ].images[ sid ] ? true : false;
+				useRing = isRunning && rem > 0 && canShowRing( sid ),
+				pct = useRing ? getRunProgress( sid ) : 0,
+				dashoffset = ( RING_CIRC * ( 1 - pct / 100 ) ).toFixed( 2 ),
+				tileState = isRunning ? "running" : ( isScheduled ? "scheduled" : "idle" ),
+				tileIcon  = isManual ? ICON_HAND : ( isScheduled ? ICON_CAL : ICON_DROP );
 
-			if ( OSApp.Stations.getStatus( sid ) && rem > 0 ) {
+			if ( isRunning && rem > 0 ) {
 				addTimer( sid, rem );
 			}
 
-			// Group card settings visually
-			cards += "<div data-station='" + sid + "' class='ui-corner-all card" +
+			// ── Card wrapper ───────────────────────────────────────────────────────
+			cards += "<div data-station='" + sid + "' class='ui-corner-all card " + tileState +
 				( OSApp.Stations.isDisabled( sid ) ? " station-hidden' style='display:none" : "" ) + "'>";
 
-			cards += "<div class='ui-body ui-body-a center'>";
+			// ── Tile body ──────────────────────────────────────────────────────────
+			cards += "<div class='ui-body ui-body-a tile-inner'>";
 
-			cards += "<img src='" + ( hasImage ? "data:image/jpeg;base64," + sites[ currentSite ].images[ sid ] : OSApp.UIDom.getAppURLPath() + "img/placeholder.png" ) + "' />";
-
-
-			cards += "<p class='station-name center inline-icon' id='station_" + sid + "'>" + OSApp.Stations.getName( sid) + "</p>";
-			cards += "<span class='bno-border ui-btn ui-btn-icon-notext ui-corner-all card-icon station-status " +
-				( isRunning ? "on" : ( isScheduled ? "wait" : "off" ) ) + "'></span>";
-
-			cards += "<span class='btn-no-border ui-btn ui-btn-icon-notext ui-icon-wifi card-icon special-station " +
-				( OSApp.Stations.isSpecial( sid ) ? "" : "hidden" ) + "'></span>";
-
-			if ( OSApp.Supported.groups() ) {
-				cards += "<span class='btn-no-border ui-btn card-icon station-gid " + ( OSApp.Stations.isMaster( sid ) ? "hidden" : "" ) +
-					"'>" + OSApp.Groups.mapGIDValueToName( OSApp.Stations.getGIDValue( sid ) ) + "</span>";
-			}
-
-			cards += "<span class='btn-no-border ui-btn " + ( ( OSApp.Stations.isMaster( sid ) ) ? "ui-icon-master" : "ui-icon-gear" ) +
-				" card-icon ui-btn-icon-notext station-settings' data-station='" + sid + "' id='attrib-" + sid + "' " +
+			// Row 1 — icon pill + gear (functional attrib anchor lives here)
+			cards += "<div class='tile-row-top'>" +
+				"<div class='tile-icon-pill'>" + tileIcon + "</div>" +
+				"<span class='btn-no-border ui-btn " + ( OSApp.Stations.isMaster( sid ) ? "ui-icon-master" : "ui-icon-gear" ) +
+				" card-icon ui-btn-icon-notext station-settings tile-gear-btn' data-station='" + sid + "' id='attrib-" + sid + "' " +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_1 ) ? ( "data-um='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_1 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_2 ) ? ( "data-um2='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_2 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.ignoreRain() ? ( "data-ir='" + ( OSApp.StationAttributes.getIgnoreRain( sid ) ) + "' " ) : "" ) +
@@ -236,52 +267,74 @@ OSApp.Dashboard.displayPage = function() {
 				( OSApp.Supported.sequential() ? ( "data-us='" + ( OSApp.StationAttributes.getSequential( sid ) ) + "' " ) : "" ) +
 				( OSApp.Supported.special() ? ( "data-hs='" + ( OSApp.StationAttributes.getSpecial( sid ) ) + "' " ) : "" ) +
 				( OSApp.Supported.groups() ? ( "data-gid='" + OSApp.Stations.getGIDValue( sid ) + "' " ) : "" ) +
-				"></span>";
+				"></span>" +
+				"</div>";
 
-			if ( !OSApp.Stations.isMaster( sid ) ) {
-				if ( isScheduled || isRunning ) {
-
-					// Generate status line for station
-					cards += "<p class='rem center'>" + ( isRunning ? OSApp.Language._( "Running" ) + " " + pname : OSApp.Language._( "Scheduled" ) + " " +
-						( OSApp.Stations.getStartTime( sid ) ? OSApp.Language._( "for" ) + " " + OSApp.Dates.dateToString( new Date( OSApp.Stations.getStartTime( sid ) * 1000 ) ) : pname ) );
-
-					if ( rem > 0 ) {
-
-						// Show the remaining time if it's greater than 0
-						cards += " <span id=" + ( qPause ? "'pause" : "'countdown-" ) + sid + "' class='nobr'>(" + OSApp.Dates.sec2hms( rem ) + " " + OSApp.Language._( "remaining" ) + ")</span>";
-					}
-					cards += "</p>";
-
-					// Progress bar for actively running stations
-					if ( isRunning && rem > 0 ) {
-						var pct = getRunProgress( sid );
-						cards += "<div class='station-progress-wrap'>" +
-							"<div class='station-progress-fill' id='progress-" + sid + "' style='width:" + pct + "%'></div>" +
-							"</div>";
-					}
-
-				} else {
-					// Idle station: show last-run date if available
-					var lastRun = lastRunByStation[ sid ];
-					if ( lastRun ) {
-						cards += "<p class='station-last-run center'>" + formatLastRun( lastRun ) + "</p>";
-					} else {
-						cards += "<p class='station-last-run center'></p>";
-					}
-				}
+			// Hidden functional elements required by other code — kept in DOM but invisible
+			cards += "<span class='bno-border ui-btn ui-btn-icon-notext ui-corner-all card-icon station-status " +
+				( isRunning ? "on" : ( isScheduled ? "wait" : "off" ) ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
+			cards += "<span class='btn-no-border ui-btn ui-btn-icon-notext ui-icon-wifi card-icon special-station " +
+				( OSApp.Stations.isSpecial( sid ) ? "" : "hidden" ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
+			if ( OSApp.Supported.groups() ) {
+				cards += "<span class='btn-no-border ui-btn card-icon station-gid " + ( OSApp.Stations.isMaster( sid ) ? "hidden" : "" ) +
+					"' style='position:absolute;left:-9999px;pointer-events:none'>" +
+					OSApp.Groups.mapGIDValueToName( OSApp.Stations.getGIDValue( sid ) ) + "</span>";
 			}
 
-			// Add sequential group divider and close current card group
-			cards += "</div><hr style='display:none' class='content-divider'" +
-				( OSApp.Supported.groups() ? "divider-gid=" + OSApp.Stations.getGIDValue( sid ) : "" ) + "></div>";
+			// Row 2 — mid: ring | big-time | last-run | scheduled-info
+			if ( !OSApp.Stations.isMaster( sid ) ) {
+				if ( isRunning && rem > 0 ) {
+					if ( useRing ) {
+						cards += "<div class='tile-row-mid'>" +
+							"<div class='ring-wrap'>" +
+							"<svg class='tile-ring' viewBox='0 0 56 56'>" +
+							"<circle class='ring-bg' cx='28' cy='28' r='" + RING_R + "'/>" +
+							"<circle class='ring-fill' id='progress-" + sid + "' cx='28' cy='28' r='" + RING_R + "'" +
+							" stroke-dasharray='" + RING_CIRC + "'" +
+							" stroke-dashoffset='" + dashoffset + "'/>" +
+							"</svg>" +
+							"<span class='ring-time' id='countdown-" + sid + "'>" + compactTime( rem ) + "</span>" +
+							"</div>" +
+							"</div>";
+					} else {
+						cards += "<div class='tile-row-mid'>" +
+							"<span class='tile-time-big' id='countdown-" + sid + "'>" + OSApp.Dates.sec2hms( rem ) + "</span>" +
+							"</div>";
+					}
+				} else if ( isScheduled ) {
+					var schedLabel = OSApp.Stations.getStartTime( sid ) ?
+						OSApp.Dates.dateToString( new Date( OSApp.Stations.getStartTime( sid ) * 1000 ) ) :
+						OSApp.Programs.pidToName( pid );
+					cards += "<div class='tile-row-mid'>" +
+						"<span class='tile-sched-label rem'>" + schedLabel + "</span>" +
+						"</div>";
+				} else {
+					var lastRun = lastRunByStation[ sid ];
+					cards += "<div class='tile-row-mid'>" +
+						"<span class='station-last-run tile-last-run'>" + ( lastRun ? formatLastRun( lastRun ) : "" ) + "</span>" +
+						"</div>";
+				}
+			} else {
+				cards += "<div class='tile-row-mid'></div>";
+			}
 
+			// Row 3 — name
+			cards += "<div class='tile-row-bot'>" +
+				"<p class='station-name tile-name' id='station_" + sid + "'>" + OSApp.Stations.getName( sid ) + "</p>" +
+				"</div>";
+
+			cards += "</div>"; // .tile-inner
+
+			// Divider (required by group-view logic)
+			cards += "<hr style='display:none' class='content-divider'" +
+				( OSApp.Supported.groups() ? " divider-gid=" + OSApp.Stations.getGIDValue( sid ) : "" ) + "></div>";
 		},
 		showAttributes = function() {
 			$( "#stn_attrib" ).popup( "destroy" ).remove();
 
 			var button = $( this ),
 				sid = button.data( "station" ),
-				name = button.siblings( "[id='station_" + sid + "']" ),
+				name = page.find( "#station_" + sid ),
 				showSpecialOptions = function( value ) {
 					var opts = select.find( "#specialOpts" ),
 						data = OSApp.currentSession.controller.special && Object.prototype.hasOwnProperty.call(OSApp.currentSession.controller.special,  sid ) ? OSApp.currentSession.controller.special[ sid ].sd : "",
@@ -1081,8 +1134,6 @@ OSApp.Dashboard.displayPage = function() {
 					addCard( sid );
 					cardHolder.append( cards );
 				} else {
-					card.find( ".ui-body > img" ).attr( "src", ( hasImage ? "data:image/jpeg;base64," + sites[ currentSite ].images[ sid ] : OSApp.UIDom.getAppURLPath() + "img/placeholder.png" ) );
-
 					if ( OSApp.Stations.isDisabled( sid ) ) {
 						if ( !page.hasClass( "show-hidden" ) ) {
 							card.hide();
@@ -1092,7 +1143,10 @@ OSApp.Dashboard.displayPage = function() {
 						card.show().removeClass( "station-hidden" );
 					}
 
-					card.find( "#station_" + sid ).text( OSApp.Stations.getName( sid) );
+					// Update name
+					card.find( "#station_" + sid ).text( OSApp.Stations.getName( sid ) );
+
+					// Update hidden functional elements
 					card.find( ".special-station" ).removeClass( "hidden" ).addClass( OSApp.Stations.isSpecial( sid ) ? "" : "hidden" );
 					card.find( ".station-status" ).removeClass( "on off wait" ).addClass( isRunning ? "on" : ( isScheduled ? "wait" : "off" ) );
 					if ( OSApp.Stations.isMaster( sid ) ) {
@@ -1114,57 +1168,73 @@ OSApp.Dashboard.displayPage = function() {
 						gid: OSApp.Supported.groups() ? OSApp.Stations.getGIDValue( sid ) : undefined
 					} );
 
-					if ( !OSApp.Stations.isMaster( sid ) && ( isScheduled || isRunning ) ) {
-						line = ( isRunning ? OSApp.Language._( "Running" ) + " " + pname : OSApp.Language._( "Scheduled" ) + " " +
-							( OSApp.Stations.getStartTime( sid ) ? OSApp.Language._( "for" ) + " " + OSApp.Dates.dateToString( new Date( OSApp.Stations.getStartTime( sid ) * 1000 ) ) : pname ) );
-						if ( rem > 0 ) {
+					// ── Tile state transition ──────────────────────────────────────────
+					var tileState  = isRunning ? "running" : ( isScheduled ? "scheduled" : "idle" );
+					var pid        = OSApp.Stations.getPID( sid );
+					var isManual   = ( pid === 99 || pid === 255 );
+					var tileIcon   = isManual ? ICON_HAND : ( isScheduled ? ICON_CAL : ICON_DROP );
+					var prevState  = card.hasClass( "running" ) ? "running" : ( card.hasClass( "scheduled" ) ? "scheduled" : "idle" );
 
-							// Show the remaining time if it's greater than 0
-							line += " <span id=" + ( qPause ? "'pause" : "'countdown-" ) + sid + "' class='nobr'>(" + OSApp.Dates.sec2hms( rem ) + " " + OSApp.Language._( "remaining" ) + ")</span>";
+					card.removeClass( "running scheduled idle" ).addClass( tileState );
+					card.find( ".tile-icon-pill" ).html( tileIcon );
+
+					var mid = card.find( ".tile-row-mid" );
+
+					if ( !OSApp.Stations.isMaster( sid ) ) {
+						if ( isRunning && rem > 0 ) {
+							var useRing = canShowRing( sid );
+							var pct = useRing ? getRunProgress( sid ) : 0;
+							var dashoffset = ( RING_CIRC * ( 1 - pct / 100 ) ).toFixed( 2 );
+
+							if ( useRing ) {
+								if ( mid.find( ".ring-wrap" ).length === 0 ) {
+									mid.html(
+										"<div class='ring-wrap'>" +
+										"<svg class='tile-ring' viewBox='0 0 56 56'>" +
+										"<circle class='ring-bg' cx='28' cy='28' r='" + RING_R + "'/>" +
+										"<circle class='ring-fill' id='progress-" + sid + "' cx='28' cy='28' r='" + RING_R + "'" +
+										" stroke-dasharray='" + RING_CIRC + "'" +
+										" stroke-dashoffset='" + dashoffset + "'/>" +
+										"</svg>" +
+										"<span class='ring-time' id='countdown-" + sid + "'>" + compactTime( rem ) + "</span>" +
+										"</div>"
+									);
+								} else {
+									card.find( "#progress-" + sid ).attr( "stroke-dashoffset", dashoffset );
+									card.find( "#countdown-" + sid ).text( compactTime( rem ) );
+								}
+							} else {
+								if ( mid.find( ".tile-time-big" ).length === 0 ) {
+									mid.html( "<span class='tile-time-big' id='countdown-" + sid + "'>" + OSApp.Dates.sec2hms( rem ) + "</span>" );
+								} else {
+									card.find( "#countdown-" + sid ).text( OSApp.Dates.sec2hms( rem ) );
+								}
+							}
 
 							if ( isRunning ) {
 								addTimer( sid, rem );
-							} else {
-								// Station is scheduled/paused but not running - remove timer if it exists
-								if ( OSApp.uiState.timers[ "station-" + sid ] ) {
-									delete OSApp.uiState.timers[ "station-" + sid ];
-								}
+							} else if ( OSApp.uiState.timers[ "station-" + sid ] ) {
+								delete OSApp.uiState.timers[ "station-" + sid ];
 							}
-						}
-						if ( card.find( ".rem" ).length === 0 ) {
-							card.find( ".ui-body" ).append( "<p class='rem center'>" + line + "</p>" );
-						} else {
-							card.find( ".rem" ).html( line );
-						}
 
-						// Ensure progress bar exists for running stations
-						if ( isRunning && rem > 0 ) {
-							if ( card.find( ".station-progress-wrap" ).length === 0 ) {
-								card.find( ".ui-body" ).append(
-									"<div class='station-progress-wrap'>" +
-									"<div class='station-progress-fill' id='progress-" + sid + "' style='width:" + getRunProgress( sid ) + "%'></div>" +
-									"</div>"
-								);
+						} else if ( isScheduled ) {
+							var schedLabel = OSApp.Stations.getStartTime( sid ) ?
+								OSApp.Dates.dateToString( new Date( OSApp.Stations.getStartTime( sid ) * 1000 ) ) :
+								OSApp.Programs.pidToName( pid );
+							if ( mid.find( ".tile-sched-label" ).length === 0 ) {
+								mid.html( "<span class='tile-sched-label rem'>" + schedLabel + "</span>" );
 							} else {
-								card.find( "#progress-" + sid ).css( "width", getRunProgress( sid ) + "%" );
+								mid.find( ".tile-sched-label" ).text( schedLabel );
 							}
-						}
 
-						// Remove last-run label while station is active
-						card.find( ".station-last-run" ).remove();
-
-					} else {
-						card.find( ".rem" ).remove();
-						card.find( ".station-progress-wrap" ).remove();
-
-						// Show last-run label for idle stations
-						var lastRunTs = lastRunByStation[ sid ];
-						if ( card.find( ".station-last-run" ).length === 0 ) {
-							card.find( ".ui-body" ).append(
-								"<p class='station-last-run center'>" + ( lastRunTs ? formatLastRun( lastRunTs ) : "" ) + "</p>"
-							);
 						} else {
-							card.find( ".station-last-run" ).text( lastRunTs ? formatLastRun( lastRunTs ) : "" );
+							// Idle — update last-run label
+							var lastRunTs = lastRunByStation[ sid ];
+							if ( mid.find( ".station-last-run" ).length === 0 ) {
+								mid.html( "<span class='station-last-run tile-last-run'>" + ( lastRunTs ? formatLastRun( lastRunTs ) : "" ) + "</span>" );
+							} else {
+								mid.find( ".station-last-run" ).text( lastRunTs ? formatLastRun( lastRunTs ) : "" );
+							}
 						}
 					}
 
