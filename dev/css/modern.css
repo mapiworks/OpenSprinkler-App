@@ -442,6 +442,37 @@ a.ui-btn-active {
 }
 
 /* ============================================================
+   PROGRESS BAR (running stations)
+   ============================================================ */
+
+.station-progress-wrap {
+  height: 4px;
+  background: var(--os-border);
+  border-radius: 0 0 var(--os-radius-md) var(--os-radius-md);
+  overflow: hidden;
+  margin: 8px -16px -14px -16px;
+}
+
+.station-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--os-primary), #52d68a);
+  border-radius: 0 0 var(--os-radius-md) var(--os-radius-md);
+  transition: width 1s linear;
+}
+
+/* ============================================================
+   LAST RUN LABEL (idle stations)
+   ============================================================ */
+
+.station-last-run {
+  font-size: 11px !important;
+  color: var(--os-text-muted) !important;
+  margin: 4px 0 0 !important;
+  padding: 0 !important;
+  min-height: 14px;
+}
+
+/* ============================================================
    DISABLED / HIDDEN STATIONS
    ============================================================ */
 

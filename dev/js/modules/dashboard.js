@@ -19,7 +19,70 @@ OSApp.Dashboard = OSApp.Dashboard || {};
 
 OSApp.Dashboard.displayPage = function() {
 	// Display the home dasbhoard main view
-	var cards, siteSelect, currentSite, i, sites;
+	var cards, siteSelect, currentSite, i, sites,
+		lastRunByStation = {};
+
+	// Fetch recent log entries and build a per-station last-run map
+	function fetchLastRun() {
+		var now = Math.floor( Date.now() / 1000 );
+		var start = now - ( 30 * 86400 ); // last 30 days
+		OSApp.Firmware.sendToOS( "/jl?pw=&start=" + start + "&end=" + now, "json" ).done( function( data ) {
+			if ( !Array.isArray( data ) ) { return; }
+			lastRunByStation = {};
+			data.forEach( function( entry ) {
+				var sid = entry[ 1 ];
+				var endTime = entry[ 3 ];
+				// Keep the most recent run per station
+				if ( typeof sid === "number" && ( !lastRunByStation[ sid ] || endTime > lastRunByStation[ sid ] ) ) {
+					lastRunByStation[ sid ] = endTime;
+				}
+			} );
+			// Re-render last-run labels in all idle cards
+			page.find( ".station-last-run" ).each( function() {
+				var card = $( this ).closest( ".card" );
+				var sid = OSApp.Cards.getSID( card );
+				if ( sid !== undefined && lastRunByStation[ sid ] ) {
+					$( this ).text( formatLastRun( lastRunByStation[ sid ] ) );
+				} else {
+					$( this ).remove();
+				}
+			} );
+		} );
+	}
+
+	// Format a Unix timestamp as a human-friendly last-run string
+	function formatLastRun( ts ) {
+		if ( !ts ) { return ""; }
+		var d = new Date( ts * 1000 );
+		var now = new Date();
+		var diffMs = now - d;
+		var diffMins = Math.floor( diffMs / 60000 );
+		if ( diffMins < 60 ) {
+			return OSApp.Language._( "Last run" ) + ": " + diffMins + " min ago";
+		}
+		var diffHours = Math.floor( diffMins / 60 );
+		if ( diffHours < 24 ) {
+			return OSApp.Language._( "Last run" ) + ": " + diffHours + " h ago";
+		}
+		var diffDays = Math.floor( diffHours / 24 );
+		if ( diffDays === 1 ) {
+			return OSApp.Language._( "Last run" ) + ": yesterday";
+		}
+		if ( diffDays < 14 ) {
+			return OSApp.Language._( "Last run" ) + ": " + diffDays + " days ago";
+		}
+		return OSApp.Language._( "Last run" ) + ": " + OSApp.Dates.dateToString( d );
+	}
+
+	// Calculate progress percentage for a running station (0-100)
+	function getRunProgress( sid ) {
+		var startTime = OSApp.Stations.getStartTime( sid );
+		var rem = OSApp.Stations.getRemainingRuntime( sid );
+		if ( !startTime || rem <= 0 ) { return 0; }
+		var elapsed = Math.max( 0, Math.floor( Date.now() / 1000 ) - startTime );
+		var total = elapsed + rem;
+		return total > 0 ? Math.min( 100, Math.round( elapsed / total * 100 ) ) : 0;
+	}
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
@@ -51,9 +114,13 @@ OSApp.Dashboard.displayPage = function() {
 				station: station,
 				update: function() {
 					page.find( "#countdown-" + station ).text( "(" + OSApp.Dates.sec2hms( this.val ) + " " + OSApp.Language._( "remaining" ) + ")" );
+					// Update progress bar
+					var pct = getRunProgress( station );
+					page.find( "#progress-" + station ).css( "width", pct + "%" );
 				},
 				done: function() {
 					page.find( "#countdown-" + station ).parent( "p" ).empty().siblings( ".station-status" ).removeClass( "on" ).addClass( "off" );
+					page.find( "#progress-" + station ).closest( ".station-progress-wrap" ).remove();
 				}
 			};
 		},
@@ -117,6 +184,23 @@ OSApp.Dashboard.displayPage = function() {
 						cards += " <span id=" + ( qPause ? "'pause" : "'countdown-" ) + sid + "' class='nobr'>(" + OSApp.Dates.sec2hms( rem ) + " " + OSApp.Language._( "remaining" ) + ")</span>";
 					}
 					cards += "</p>";
+
+					// Progress bar for actively running stations
+					if ( isRunning && rem > 0 ) {
+						var pct = getRunProgress( sid );
+						cards += "<div class='station-progress-wrap'>" +
+							"<div class='station-progress-fill' id='progress-" + sid + "' style='width:" + pct + "%'></div>" +
+							"</div>";
+					}
+
+				} else {
+					// Idle station: show last-run date if available
+					var lastRun = lastRunByStation[ sid ];
+					if ( lastRun ) {
+						cards += "<p class='station-last-run center'>" + formatLastRun( lastRun ) + "</p>";
+					} else {
+						cards += "<p class='station-last-run center'></p>";
+					}
 				}
 			}
 
@@ -985,8 +1069,36 @@ OSApp.Dashboard.displayPage = function() {
 						} else {
 							card.find( ".rem" ).html( line );
 						}
+
+						// Ensure progress bar exists for running stations
+						if ( isRunning && rem > 0 ) {
+							if ( card.find( ".station-progress-wrap" ).length === 0 ) {
+								card.find( ".ui-body" ).append(
+									"<div class='station-progress-wrap'>" +
+									"<div class='station-progress-fill' id='progress-" + sid + "' style='width:" + getRunProgress( sid ) + "%'></div>" +
+									"</div>"
+								);
+							} else {
+								card.find( "#progress-" + sid ).css( "width", getRunProgress( sid ) + "%" );
+							}
+						}
+
+						// Remove last-run label while station is active
+						card.find( ".station-last-run" ).remove();
+
 					} else {
 						card.find( ".rem" ).remove();
+						card.find( ".station-progress-wrap" ).remove();
+
+						// Show last-run label for idle stations
+						var lastRunTs = lastRunByStation[ sid ];
+						if ( card.find( ".station-last-run" ).length === 0 ) {
+							card.find( ".ui-body" ).append(
+								"<p class='station-last-run center'>" + ( lastRunTs ? formatLastRun( lastRunTs ) : "" ) + "</p>"
+							);
+						} else {
+							card.find( ".station-last-run" ).text( lastRunTs ? formatLastRun( lastRunTs ) : "" );
+						}
 					}
 
 				}
@@ -1025,6 +1137,7 @@ OSApp.Dashboard.displayPage = function() {
 
 	page.one( "pageshow", function() {
 		$( "html" ).on( "datarefresh", updateContent );
+		fetchLastRun();
 	} );
 
 	function begin( firstLoad ) {
