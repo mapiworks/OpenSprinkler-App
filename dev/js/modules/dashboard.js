@@ -173,6 +173,10 @@ OSApp.Dashboard.displayPage = function() {
 	var ICON_DROP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
 		'<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>';
 
+	var ICON_GEAR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+		'<circle cx="12" cy="12" r="3"/>' +
+		'<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
@@ -252,11 +256,27 @@ OSApp.Dashboard.displayPage = function() {
 			// ── Tile body ──────────────────────────────────────────────────────────
 			cards += "<div class='ui-body ui-body-a tile-inner'>";
 
-			// Row 1 — icon pill + gear (functional attrib anchor lives here)
+			// Row 1 — icon pill + plain SVG gear (no jQuery Mobile classes = no positioning fight)
 			cards += "<div class='tile-row-top'>" +
 				"<div class='tile-icon-pill'>" + tileIcon + "</div>" +
-				"<span class='btn-no-border ui-btn " + ( OSApp.Stations.isMaster( sid ) ? "ui-icon-master" : "ui-icon-gear" ) +
-				" ui-btn-icon-notext station-settings tile-gear-btn' data-station='" + sid + "' id='attrib-" + sid + "' " +
+				"<div class='tile-gear-btn' data-station='" + sid + "'>" + ICON_GEAR + "</div>" +
+				"</div>";
+
+			// Hidden functional elements — jQuery Mobile attrib anchor, status dot, wifi icon, group label.
+			// All kept in DOM (other code reads/writes them) but rendered off-screen.
+			cards += "<span class='bno-border ui-btn ui-btn-icon-notext ui-corner-all card-icon station-status " +
+				( isRunning ? "on" : ( isScheduled ? "wait" : "off" ) ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
+			cards += "<span class='btn-no-border ui-btn ui-btn-icon-notext ui-icon-wifi card-icon special-station " +
+				( OSApp.Stations.isSpecial( sid ) ? "" : "hidden" ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
+			if ( OSApp.Supported.groups() ) {
+				cards += "<span class='btn-no-border ui-btn card-icon station-gid " + ( OSApp.Stations.isMaster( sid ) ? "hidden" : "" ) +
+					"' style='position:absolute;left:-9999px;pointer-events:none'>" +
+					OSApp.Groups.mapGIDValueToName( OSApp.Stations.getGIDValue( sid ) ) + "</span>";
+			}
+			// Functional attrib anchor (hidden) — stores per-station settings data
+			cards += "<span class='btn-no-border ui-btn " + ( OSApp.Stations.isMaster( sid ) ? "ui-icon-master" : "ui-icon-gear" ) +
+				" card-icon ui-btn-icon-notext station-settings' data-station='" + sid + "' id='attrib-" + sid + "' " +
+				"style='position:absolute;left:-9999px;pointer-events:none' " +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_1 ) ? ( "data-um='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_1 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_2 ) ? ( "data-um2='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_2 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.ignoreRain() ? ( "data-ir='" + ( OSApp.StationAttributes.getIgnoreRain( sid ) ) + "' " ) : "" ) +
@@ -267,19 +287,7 @@ OSApp.Dashboard.displayPage = function() {
 				( OSApp.Supported.sequential() ? ( "data-us='" + ( OSApp.StationAttributes.getSequential( sid ) ) + "' " ) : "" ) +
 				( OSApp.Supported.special() ? ( "data-hs='" + ( OSApp.StationAttributes.getSpecial( sid ) ) + "' " ) : "" ) +
 				( OSApp.Supported.groups() ? ( "data-gid='" + OSApp.Stations.getGIDValue( sid ) + "' " ) : "" ) +
-				"></span>" +
-				"</div>";
-
-			// Hidden functional elements required by other code — kept in DOM but invisible
-			cards += "<span class='bno-border ui-btn ui-btn-icon-notext ui-corner-all card-icon station-status " +
-				( isRunning ? "on" : ( isScheduled ? "wait" : "off" ) ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
-			cards += "<span class='btn-no-border ui-btn ui-btn-icon-notext ui-icon-wifi card-icon special-station " +
-				( OSApp.Stations.isSpecial( sid ) ? "" : "hidden" ) + "' style='position:absolute;left:-9999px;pointer-events:none'></span>";
-			if ( OSApp.Supported.groups() ) {
-				cards += "<span class='btn-no-border ui-btn card-icon station-gid " + ( OSApp.Stations.isMaster( sid ) ? "hidden" : "" ) +
-					"' style='position:absolute;left:-9999px;pointer-events:none'>" +
-					OSApp.Groups.mapGIDValueToName( OSApp.Stations.getGIDValue( sid ) ) + "</span>";
-			}
+				"></span>";
 
 			// Row 2 — mid: ring | big-time | last-run | scheduled-info
 			if ( !OSApp.Stations.isMaster( sid ) ) {
@@ -1302,6 +1310,13 @@ OSApp.Dashboard.displayPage = function() {
 		updateClock();
 
 		page.on( "click", ".station-settings", showAttributes );
+
+		// Proxy the visible SVG gear button → hidden #attrib-{sid} so showAttributes
+		// sees the correct `this` (the element that stores all station data attributes).
+		page.on( "click", ".tile-gear-btn", function( e ) {
+			e.stopPropagation();
+			page.find( "#attrib-" + $( this ).data( "station" ) ).trigger( "click" );
+		} );
 
 		page.on( "click", ".settings-weather", function() {
 			OSApp.UIDom.changePage( "#os-options", {

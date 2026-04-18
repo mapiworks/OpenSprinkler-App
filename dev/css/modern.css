@@ -245,39 +245,33 @@ button.ui-btn-active {
   height: 18px;
 }
 
-/* Pull all .card-icon children back into the flex row.
-   main.css sets position:absolute on .card-icon globally — override it here. */
-.tile-row-top > * {
-  position: static !important;
-  top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-  left: auto !important;
-}
-
-/* Gear button inside tile (re-uses .station-settings jQM element) */
-.station-settings.tile-gear-btn {
-  width: 28px !important;
-  height: 28px !important;
-  min-height: 28px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
+/* Plain SVG gear button — no jQuery Mobile classes, no positioning fight */
+.tile-gear-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   flex-shrink: 0;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
 }
 
-.card.idle .station-settings.tile-gear-btn {
-  background: rgba(0,0,0,0.05) !important;
-  color: var(--os-text-muted) !important;
+.tile-gear-btn svg {
+  width: 15px;
+  height: 15px;
+  pointer-events: none;
 }
 
-.card.running .station-settings.tile-gear-btn,
-.card.scheduled .station-settings.tile-gear-btn {
-  background: rgba(255,255,255,0.18) !important;
-  color: rgba(255,255,255,0.8) !important;
+.card.idle .tile-gear-btn {
+  background: rgba(0,0,0,0.05);
+  color: var(--os-text-muted);
+}
+
+.card.running .tile-gear-btn,
+.card.scheduled .tile-gear-btn {
+  background: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.8);
 }
 
 /* ── Row 2: mid content ───────────────────────────────────── */
