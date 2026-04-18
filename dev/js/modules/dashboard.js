@@ -74,18 +74,31 @@ OSApp.Dashboard.displayPage = function() {
 		return OSApp.Language._( "Last run" ) + ": " + OSApp.Dates.dateToString( d );
 	}
 
-	// Per-station initial remaining time (captured the moment a station is first seen running)
-	var stationInitialRem = {};
-
 	// Calculate progress percentage for a running station (0-100).
-	// Uses the initial remaining time snapshotted when the station was first detected,
-	// since the firmware does not expose a reliable "run started at" timestamp.
+	// ps[sid][1] = actual remaining seconds (from firmware, live)
+	// ps[sid][2] = Unix timestamp when the station started (from firmware)
+	// Both are available — use them directly for accurate, reload-safe progress.
 	function getRunProgress( sid ) {
+		var startTime = OSApp.Stations.getStartTime( sid );
 		var rem = OSApp.Stations.getRemainingRuntime( sid );
-		var initialRem = stationInitialRem[ sid ];
-		if ( !initialRem || initialRem <= 0 || rem < 0 ) { return 0; }
-		var elapsed = initialRem - rem;
-		return Math.min( 100, Math.max( 0, Math.round( elapsed / initialRem * 100 ) ) );
+		if ( !startTime || startTime <= 0 || rem <= 0 ) { return 0; }
+		var nowSec = Math.floor( Date.now() / 1000 );
+		var elapsed = Math.max( 0, nowSec - startTime );
+		var total = elapsed + rem;
+		return total > 0 ? Math.min( 100, Math.round( elapsed / total * 100 ) ) : 0;
+	}
+
+	// Actual remaining seconds for a running station, accounting for elapsed time
+	// since the firmware start timestamp. More accurate than the raw rem value
+	// when the page is loaded mid-run.
+	function getActualRemaining( sid ) {
+		var startTime = OSApp.Stations.getStartTime( sid );
+		var rem = OSApp.Stations.getRemainingRuntime( sid );
+		if ( !startTime || startTime <= 0 ) { return rem; }
+		var nowSec = Math.floor( Date.now() / 1000 );
+		var elapsed = Math.max( 0, nowSec - startTime );
+		var total = rem + elapsed; // total = original duration
+		return Math.max( 0, total - elapsed );
 	}
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
@@ -113,23 +126,21 @@ OSApp.Dashboard.displayPage = function() {
 
 	var page = $(content),
 		addTimer = function( station, rem ) {
-			// Snapshot the initial remaining time the first time we see this station running
-			if ( !stationInitialRem[ station ] ) {
-				stationInitialRem[ station ] = rem;
-			}
+			// Seed the countdown with the actual remaining time derived from
+			// the firmware start timestamp, so it's correct even on mid-run page loads.
+			var actualRem = getActualRemaining( station );
 			OSApp.uiState.timers[ "station-" + station ] = {
-				val: rem,
+				val: actualRem,
 				station: station,
 				update: function() {
 					page.find( "#countdown-" + station ).text( "(" + OSApp.Dates.sec2hms( this.val ) + " " + OSApp.Language._( "remaining" ) + ")" );
-					// Update progress bar
+					// Update progress bar using firmware start time
 					var pct = getRunProgress( station );
 					page.find( "#progress-" + station ).css( "width", pct + "%" );
 				},
 				done: function() {
 					page.find( "#countdown-" + station ).parent( "p" ).empty().siblings( ".station-status" ).removeClass( "on" ).addClass( "off" );
 					page.find( "#progress-" + station ).closest( ".station-progress-wrap" ).remove();
-					delete stationInitialRem[ station ];
 				}
 			};
 		},
