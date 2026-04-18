@@ -256,7 +256,7 @@ OSApp.Dashboard.displayPage = function() {
 			cards += "<div class='tile-row-top'>" +
 				"<div class='tile-icon-pill'>" + tileIcon + "</div>" +
 				"<span class='btn-no-border ui-btn " + ( OSApp.Stations.isMaster( sid ) ? "ui-icon-master" : "ui-icon-gear" ) +
-				" card-icon ui-btn-icon-notext station-settings tile-gear-btn' data-station='" + sid + "' id='attrib-" + sid + "' " +
+				" ui-btn-icon-notext station-settings tile-gear-btn' data-station='" + sid + "' id='attrib-" + sid + "' " +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_1 ) ? ( "data-um='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_1 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.master( OSApp.Constants.options.MASTER_STATION_2 ) ? ( "data-um2='" + ( OSApp.StationAttributes.getMasterOperation( sid, OSApp.Constants.options.MASTER_STATION_2 ) ) + "' " ) : "" ) +
 				( OSApp.Supported.ignoreRain() ? ( "data-ir='" + ( OSApp.StationAttributes.getIgnoreRain( sid ) ) + "' " ) : "" ) +

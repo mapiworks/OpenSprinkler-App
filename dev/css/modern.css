@@ -245,9 +245,18 @@ button.ui-btn-active {
   height: 18px;
 }
 
+/* Pull all .card-icon children back into the flex row.
+   main.css sets position:absolute on .card-icon globally — override it here. */
+.tile-row-top > * {
+  position: static !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+}
+
 /* Gear button inside tile (re-uses .station-settings jQM element) */
 .station-settings.tile-gear-btn {
-  position: static !important;
   width: 28px !important;
   height: 28px !important;
   min-height: 28px !important;
