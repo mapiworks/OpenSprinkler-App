@@ -1,0 +1,450 @@
+/*
+ * OpenSprinkler Modern Theme — Design Proposal
+ * A clean, functional redesign layered on top of jQuery Mobile.
+ * All changes are purely cosmetic — no functionality is altered.
+ */
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+
+:root {
+  --os-primary:        #27AE60;
+  --os-primary-dark:   #1E8449;
+  --os-primary-light:  #EAFAF1;
+  --os-accent:         #2980B9;
+
+  --os-bg:             #F0F2F5;
+  --os-card-bg:        #FFFFFF;
+  --os-border:         #E4E8EE;
+
+  --os-text:           #1A2332;
+  --os-text-secondary: #5A6475;
+  --os-text-muted:     #9AA3B0;
+
+  --os-shadow-sm:      0 1px 4px rgba(0,0,0,0.06);
+  --os-shadow-md:      0 2px 10px rgba(0,0,0,0.09);
+  --os-shadow-lg:      0 6px 24px rgba(0,0,0,0.12);
+
+  --os-radius-sm:      8px;
+  --os-radius-md:      12px;
+  --os-radius-lg:      16px;
+
+  --os-status-on:      #27AE60;
+  --os-status-wait:    #F39C12;
+  --os-status-off:     #CBD0D8;
+
+  --os-font:           -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                       'Helvetica Neue', Arial, sans-serif;
+  --os-font-mono:      'SF Mono', SFMono-Regular, 'Fira Code', monospace;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+body,
+.ui-page {
+  background: var(--os-bg) !important;
+  font-family: var(--os-font) !important;
+  color: var(--os-text) !important;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.ui-header,
+.ui-header.ui-bar-a {
+  background: #FFFFFF !important;
+  background-image: none !important;
+  border: none !important;
+  border-bottom: 1px solid var(--os-border) !important;
+  box-shadow: var(--os-shadow-sm) !important;
+}
+
+.ui-header .ui-title {
+  color: var(--os-text) !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.3px !important;
+  text-shadow: none !important;
+  margin-left: 0.5em !important;
+}
+
+.ui-header .ui-btn,
+.ui-header .ui-btn:after,
+.ui-header .ui-btn-active {
+  color: var(--os-primary) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* ============================================================
+   ACCENT / ACTIVE COLOR
+   ============================================================ */
+
+.ui-selectmenu-list .activeButton,
+.activeButton.ui-slider-bg,
+.activeButton.ui-checkbox-on,
+.ui-radio-on,
+.ui-btn.ui-checkbox-on:after,
+button.ui-btn-active {
+  background-color: var(--os-primary) !important;
+  border-color: var(--os-primary) !important;
+  color: #fff !important;
+  text-shadow: none !important;
+}
+
+/* ============================================================
+   PAGE CONTENT
+   ============================================================ */
+
+.ui-content {
+  padding: 12px 14px !important;
+  max-width: 600px;
+}
+
+/* ============================================================
+   INFO CARD (top weather + site block)
+   ============================================================ */
+
+.info-card {
+  background: var(--os-card-bg) !important;
+  border-radius: var(--os-radius-md) !important;
+  border: 1px solid var(--os-border) !important;
+  box-shadow: var(--os-shadow-md) !important;
+  margin: 0 auto 14px !important;
+  max-width: 560px;
+  padding: 14px 16px !important;
+  min-height: unset !important;
+}
+
+.info-card > div {
+  transition: opacity 0.15s ease !important;
+}
+
+.sitename {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: var(--os-text) !important;
+  padding-bottom: 4px !important;
+}
+
+#clock-s {
+  font-size: 12px !important;
+  color: var(--os-text-muted) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+#water-level {
+  font-size: 13px !important;
+  color: var(--os-text-secondary) !important;
+  margin-top: 4px;
+}
+
+#water-level span {
+  color: var(--os-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* ============================================================
+   STATION CARDS
+   ============================================================ */
+
+.card {
+  background: var(--os-card-bg) !important;
+  border-radius: var(--os-radius-md) !important;
+  border: 1px solid var(--os-border) !important;
+  box-shadow: var(--os-shadow-md) !important;
+  margin: 0 auto 10px !important;
+  max-width: 560px;
+  padding: 0 !important;
+  cursor: pointer;
+  transition: box-shadow 0.18s ease, transform 0.18s ease !important;
+  overflow: hidden;
+}
+
+.card:active {
+  box-shadow: var(--os-shadow-lg) !important;
+  transform: scale(0.985) !important;
+}
+
+.card > .ui-body,
+.card > .ui-body-a {
+  background: transparent !important;
+  border: none !important;
+  padding: 14px 16px !important;
+  min-height: 56px !important;
+}
+
+/* Running station: green left-border accent */
+.card:has(.station-status.on) {
+  border-left: 3px solid var(--os-status-on) !important;
+}
+
+/* Scheduled station: amber left-border accent */
+.card:has(.station-status.wait) {
+  border-left: 3px solid var(--os-status-wait) !important;
+}
+
+/* ============================================================
+   STATION NAME
+   ============================================================ */
+
+.station-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--os-text) !important;
+  letter-spacing: -0.15px !important;
+  width: 70% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap;
+  display: block;
+  margin: 4px auto 0 !important;
+}
+
+/* ============================================================
+   STATUS INDICATOR
+   ============================================================ */
+
+.station-status {
+  top: 10px !important;
+  left: 12px !important;
+}
+
+.station-status:after {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  display: block;
+}
+
+.station-status.on:after {
+  background-color: var(--os-status-on) !important;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.18) !important;
+}
+
+.station-status.wait:after {
+  background-color: var(--os-status-wait) !important;
+  box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.18) !important;
+}
+
+.station-status.off:after {
+  background-color: var(--os-status-off) !important;
+  box-shadow: none !important;
+}
+
+/* ============================================================
+   REMAINING TIME
+   ============================================================ */
+
+.rem {
+  font-size: 12px !important;
+  color: var(--os-text-muted) !important;
+  font-family: var(--os-font-mono) !important;
+  padding-top: 4px !important;
+}
+
+/* ============================================================
+   CARD ICONS (settings gear, wifi, group)
+   ============================================================ */
+
+.station-settings {
+  top: 8px !important;
+  right: 10px !important;
+  opacity: 0.45;
+}
+
+.station-settings:hover,
+.station-settings:focus {
+  opacity: 0.85;
+}
+
+.special-station {
+  top: 8px !important;
+  right: 10px !important;
+  margin-right: 36px !important;
+  opacity: 0.5;
+}
+
+.station-gid {
+  top: 6px !important;
+  right: 10px !important;
+  margin-right: 52px !important;
+  font-size: 11px !important;
+  color: var(--os-text-muted) !important;
+}
+
+/* ============================================================
+   CARD GROUP
+   ============================================================ */
+
+.card-group {
+  padding: 0 2px !important;
+}
+
+/* Two-column grid on wider screens */
+@media (min-width: 640px) {
+  #os-stations-list,
+  #os-running-stations {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    column-count: unset !important;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .card {
+    margin: 0 !important;
+  }
+}
+
+/* ============================================================
+   GENERAL BUTTONS
+   ============================================================ */
+
+.ui-btn {
+  font-family: var(--os-font) !important;
+  text-shadow: none !important;
+  border-radius: var(--os-radius-sm) !important;
+  font-size: 14px !important;
+  letter-spacing: -0.1px;
+}
+
+.ui-btn-active,
+a.ui-btn-active {
+  background-color: var(--os-primary) !important;
+  border-color: var(--os-primary-dark) !important;
+  color: #fff !important;
+  text-shadow: none !important;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.ui-footer,
+#footer-running.ui-bar {
+  background: #FFFFFF !important;
+  border-top: 1px solid var(--os-border) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+#footer-running.ui-bar {
+  color: var(--os-text) !important;
+}
+
+/* ============================================================
+   POPUPS & DIALOGS
+   ============================================================ */
+
+.ui-popup {
+  border-radius: var(--os-radius-lg) !important;
+  overflow: hidden;
+  box-shadow: var(--os-shadow-lg) !important;
+}
+
+.ui-popup .ui-header {
+  border-radius: var(--os-radius-lg) var(--os-radius-lg) 0 0 !important;
+}
+
+/* ============================================================
+   LIST ITEMS
+   ============================================================ */
+
+.ui-listview > li {
+  border-bottom: 1px solid var(--os-border) !important;
+}
+
+.ui-listview > li:last-child {
+  border-bottom: none !important;
+}
+
+/* ============================================================
+   COLLAPSIBLES
+   ============================================================ */
+
+.ui-collapsible-heading-toggle {
+  border-radius: var(--os-radius-sm) !important;
+  background: var(--os-card-bg) !important;
+  color: var(--os-text) !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+  box-shadow: var(--os-shadow-sm) !important;
+}
+
+/* ============================================================
+   SLIDERS
+   ============================================================ */
+
+.ui-slider-track {
+  border-radius: 99px !important;
+}
+
+.ui-slider-handle {
+  border-radius: 50% !important;
+  box-shadow: var(--os-shadow-md) !important;
+}
+
+/* ============================================================
+   INPUT FIELDS
+   ============================================================ */
+
+.ui-input-text input,
+.ui-input-search input {
+  border-radius: var(--os-radius-sm) !important;
+  font-family: var(--os-font) !important;
+  color: var(--os-text) !important;
+  border-color: var(--os-border) !important;
+}
+
+.ui-input-text input:focus,
+.ui-input-search input:focus {
+  border-color: var(--os-primary) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.15) !important;
+}
+
+/* ============================================================
+   STATION IMAGES (when enabled)
+   ============================================================ */
+
+.has-images .card img {
+  border-radius: var(--os-radius-sm) !important;
+  object-fit: cover;
+}
+
+/* ============================================================
+   SCROLLBARS (webkit)
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--os-border);
+  border-radius: 99px;
+}
+
+/* ============================================================
+   DISABLED / HIDDEN STATIONS
+   ============================================================ */
+
+.station-hidden {
+  opacity: 0.4 !important;
+}
