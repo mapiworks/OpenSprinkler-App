@@ -74,14 +74,18 @@ OSApp.Dashboard.displayPage = function() {
 		return OSApp.Language._( "Last run" ) + ": " + OSApp.Dates.dateToString( d );
 	}
 
-	// Calculate progress percentage for a running station (0-100)
+	// Per-station initial remaining time (captured the moment a station is first seen running)
+	var stationInitialRem = {};
+
+	// Calculate progress percentage for a running station (0-100).
+	// Uses the initial remaining time snapshotted when the station was first detected,
+	// since the firmware does not expose a reliable "run started at" timestamp.
 	function getRunProgress( sid ) {
-		var startTime = OSApp.Stations.getStartTime( sid );
 		var rem = OSApp.Stations.getRemainingRuntime( sid );
-		if ( !startTime || rem <= 0 ) { return 0; }
-		var elapsed = Math.max( 0, Math.floor( Date.now() / 1000 ) - startTime );
-		var total = elapsed + rem;
-		return total > 0 ? Math.min( 100, Math.round( elapsed / total * 100 ) ) : 0;
+		var initialRem = stationInitialRem[ sid ];
+		if ( !initialRem || initialRem <= 0 || rem < 0 ) { return 0; }
+		var elapsed = initialRem - rem;
+		return Math.min( 100, Math.max( 0, Math.round( elapsed / initialRem * 100 ) ) );
 	}
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
@@ -109,6 +113,10 @@ OSApp.Dashboard.displayPage = function() {
 
 	var page = $(content),
 		addTimer = function( station, rem ) {
+			// Snapshot the initial remaining time the first time we see this station running
+			if ( !stationInitialRem[ station ] ) {
+				stationInitialRem[ station ] = rem;
+			}
 			OSApp.uiState.timers[ "station-" + station ] = {
 				val: rem,
 				station: station,
@@ -121,6 +129,7 @@ OSApp.Dashboard.displayPage = function() {
 				done: function() {
 					page.find( "#countdown-" + station ).parent( "p" ).empty().siblings( ".station-status" ).removeClass( "on" ).addClass( "off" );
 					page.find( "#progress-" + station ).closest( ".station-progress-wrap" ).remove();
+					delete stationInitialRem[ station ];
 				}
 			};
 		},
