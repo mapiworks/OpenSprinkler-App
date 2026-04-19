@@ -123,6 +123,59 @@ button.ui-btn-active {
   min-height: unset !important;
 }
 
+/* ── Info card layout ───────────────────────────────────────── */
+
+.info-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.info-card-title.sitename {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--os-text) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.info-card-clock#clock-s {
+  font-size: 12px !important;
+  color: var(--os-text-muted) !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.info-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.info-card-weather#weather {
+  flex-shrink: 0;
+}
+
+.info-card-wl#water-level {
+  font-size: 13px !important;
+  color: var(--os-text-secondary) !important;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.info-card-wl#water-level span.waterlevel {
+  color: var(--os-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Legacy selectors kept for any other code that references them */
 .sitename {
   font-size: 15px !important;
   font-weight: 700 !important;
@@ -138,7 +191,6 @@ button.ui-btn-active {
 #water-level {
   font-size: 13px !important;
   color: var(--os-text-secondary) !important;
-  margin-top: 4px;
 }
 
 #water-level span {

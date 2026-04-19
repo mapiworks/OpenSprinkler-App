@@ -242,19 +242,18 @@ OSApp.Dashboard.displayPage = function() {
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
 					'<div class="ui-body ui-corner-all info-card noweather">' +
-						'<div class="ui-grid-a">' +
-							'<div class="ui-block-a center">' +
-								'<div id="weather" class="pointer"></div>' +
-								'<div id="restr-active" class="pointer settings-weather' + (( OSApp.currentSession.controller.settings?.wtrestr || 0 > 0 ) ? '' : ' hidden') + '">' +
-									'<span class="bold blue-text">' + OSApp.Language._("Weather Restriction Active") + '</span>' +
-								'</div>' +
+						'<div class="info-card-header">' +
+							'<div class="sitename info-card-title settings-weather home-info pointer"></div>' +
+							'<div id="clock-s" class="info-card-clock nobr"></div>' +
+						'</div>' +
+						'<div class="info-card-meta settings-weather home-info pointer">' +
+							'<div id="weather" class="info-card-weather pointer"></div>' +
+							'<div id="water-level" class="info-card-wl">' +
+								'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:middle;margin-right:3px"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>' +
+								'<span class="waterlevel"></span>%' +
 							'</div>' +
-							'<div class="ui-block-b center settings-weather home-info pointer">' +
-								'<div class="sitename bold"></div>' +
-								'<div id="clock-s" class="nobr"></div>' +
-								'<div id="water-level">' +
-									OSApp.Language._("Water Level") + ': <span class="waterlevel"></span>%' +
-								'</div>' +
+							'<div id="restr-active" class="pointer settings-weather' + (( OSApp.currentSession.controller.settings?.wtrestr || 0 > 0 ) ? '' : ' hidden') + '">' +
+								'<span class="bold blue-text">' + OSApp.Language._("Weather Restriction Active") + '</span>' +
 							'</div>' +
 						'</div>' +
 						'<div id="os-sensor-show" class="sensor-tag-row" style="display:none"></div>' +
