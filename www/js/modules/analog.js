@@ -311,6 +311,8 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 		}
 		list += "</select></div>";
 
+		var isMqtt = sensor.type === 90;
+
 		list += "<button data-mini='true' class='center-div' id='smt100id' style='display:" + ( OSApp.Analog.isSmt100( sensor.type ) ? "block" : "none" ) + "'>" + OSApp.Language._( "Set SMT100 Modbus ID" ) + "</button>";
 
 		list += "<label>" +
@@ -323,6 +325,18 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 			"</label>" +
 			"<input class='name' type='text'  value='" + sensor.name + "'>" +
 
+			// ── MQTT-only fields (topic, filter, unit) ──────────────────────────
+			"<div id='mqtt-fields' style='display:" + ( isMqtt ? "block" : "none" ) + "'>" +
+			"<label>" + OSApp.Language._( "MQTT Topic" ) + "</label>" +
+			"<input class='mqtt-topic' type='text' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' value='" + ( sensor.topic || "" ) + "' placeholder='e.g. shelly/garage/pumpe/druck/events'>" +
+			"<label>" + OSApp.Language._( "JSON Filter (field name)" ) + "</label>" +
+			"<input class='mqtt-filter' type='text' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' value='" + ( sensor.filter || "" ) + "' placeholder='e.g. xvoltage'>" +
+			"<label>" + OSApp.Language._( "Unit" ) + "</label>" +
+			"<input class='unit' type='text' value='" + ( sensor.unit || "" ) + "' placeholder='e.g. bar'>" +
+			"</div>" +
+
+			// ── Non-MQTT fields (IP, port, ID) ──────────────────────────────────
+			"<div id='network-fields' style='display:" + ( isMqtt ? "none" : "block" ) + "'>" +
 			"<label>" +
 			OSApp.Language._( "IP Address" ) +
 			"</label>" +
@@ -337,6 +351,7 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 			OSApp.Language._( "ID" ) +
 			"</label>" +
 			"<input class='id' type='number' min='0' max='65535' value='" + sensor.id + "'>" +
+			"</div>" +
 
 					( ( sensor.type === OSApp.Analog.Constants.USERDEF_SENSOR ) ?
 						( "<label>" +
@@ -406,7 +421,10 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 		} );
 		popup.find( "#type" ).change( function() {
 			var type = parseInt( popup.find( "#type" ).val() );
+			var mqtt = type === 90;
 			document.getElementById( "smt100id" ).style.display = OSApp.Analog.isSmt100( type ) ? "block" : "none";
+			popup.find( "#mqtt-fields" ).css( "display", mqtt ? "block" : "none" );
+			popup.find( "#network-fields" ).css( "display", mqtt ? "none" : "block" );
 		} );
 
 		popup.find( ".submit" ).on( "click", function() {
@@ -420,21 +438,25 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 					}
 				}
 			}
+			var outType = parseInt( popup.find( "#type" ).val() );
+			var outMqtt = outType === 90;
 			var sensorOut = {
 				nr: parseInt( popup.find( ".nr" ).val() ),
-				type: parseInt( popup.find( "#type" ).val() ),
+				type: outType,
 				group: parseInt( popup.find( ".group" ).val() ),
 				name: popup.find( ".name" ).val(),
-				ip: OSApp.Analog.intFromBytes( popup.find( ".ip" ).val().split( "." ) ),
-				port: parseInt( popup.find( ".port" ).val() ),
-				id: parseInt( popup.find( ".id" ).val() ),
+				ip: outMqtt ? 0 : OSApp.Analog.intFromBytes( popup.find( ".ip" ).val().split( "." ) ),
+				port: outMqtt ? 0 : parseInt( popup.find( ".port" ).val() ),
+				id: outMqtt ? 0 : parseInt( popup.find( ".id" ).val() ),
 				ri: parseInt( popup.find( ".ri" ).val() ),
 				fac: parseInt( popup.find( ".fac" ).val() ),
 				div: parseInt( popup.find( ".div" ).val() ),
 				unit: popup.find( ".unit" ).val(),
 				enable: popup.find( "#enable" ).is( ":checked" ) ? 1 : 0,
 				log: popup.find( "#log" ).is( ":checked" ) ? 1 : 0,
-				show: popup.find( "#show" ).is( ":checked" ) ? 1 : 0
+				show: popup.find( "#show" ).is( ":checked" ) ? 1 : 0,
+				topic: outMqtt ? popup.find( ".mqtt-topic" ).val() : undefined,
+				filter: outMqtt ? popup.find( ".mqtt-filter" ).val() : undefined
 			};
 
 			callback( sensorOut );
@@ -529,7 +551,12 @@ OSApp.Analog.showAnalogSensorConfig = ( function() {
 					( ( sensorOut.type === OSApp.Analog.Constants.USERDEF_SENSOR ) ?
 						( "&fac=" + sensorOut.fac +
 						"&div=" + sensorOut.div +
-						"&unit=" + sensorOut.unit
+						"&unit=" + encodeURIComponent( sensorOut.unit )
+						) : "" ) +
+					( ( sensorOut.type === 90 ) ?
+						( "&topic=" + encodeURIComponent( sensorOut.topic || "" ) +
+						"&filter=" + encodeURIComponent( sensorOut.filter || "" ) +
+						"&unit=" + encodeURIComponent( sensorOut.unit || "" )
 						) : "" ) +
 					"&enable=" + sensorOut.enable +
 					"&log=" + sensorOut.log +
@@ -560,11 +587,16 @@ OSApp.Analog.showAnalogSensorConfig = ( function() {
 					"&port=" + sensorOut.port +
 					"&id=" + sensorOut.id +
 					"&ri=" + sensorOut.ri +
-				( ( sensorOut.type === OSApp.Analog.Constants.USERDEF_SENSOR ) ?
-					( "&fac=" + sensorOut.fac +
-					"&div=" + sensorOut.div +
-					"&unit=" + sensorOut.unit
-				) : "" ) +
+					( ( sensorOut.type === OSApp.Analog.Constants.USERDEF_SENSOR ) ?
+						( "&fac=" + sensorOut.fac +
+						"&div=" + sensorOut.div +
+						"&unit=" + encodeURIComponent( sensorOut.unit )
+						) : "" ) +
+					( ( sensorOut.type === 90 ) ?
+						( "&topic=" + encodeURIComponent( sensorOut.topic || "" ) +
+						"&filter=" + encodeURIComponent( sensorOut.filter || "" ) +
+						"&unit=" + encodeURIComponent( sensorOut.unit || "" )
+						) : "" ) +
 					"&enable=" + sensorOut.enable +
 					"&log=" + sensorOut.log +
 					"&show=" + sensorOut.show
