@@ -718,7 +718,13 @@ OSApp.Analog.showAnalogSensorConfig = ( function() {
 			}
 		} );
 
-		updateSensorContent();
+		// Always fetch fresh sensor data so the editor shows current values
+		// (topic, filter, unit etc.) even if they were changed outside the app.
+		OSApp.Analog.updateProgramAdjustments( function() {
+			OSApp.Analog.updateAnalogSensor( function() {
+				updateSensorContent();
+			} );
+		} );
 
 		$( "#analogsensorconfig" ).remove();
 		$.mobile.pageContainer.append( page );
