@@ -309,8 +309,8 @@ OSApp.UIDom.showHomeMenu = ( function() {
 				"<li><a href='#os-options'>" + OSApp.Language._( "Edit Options" ) + "</a></li>" +
 
 				( OSApp.Analog.checkAnalogSensorAvail() ? (
-					"<li><a href='#analogsensorconfig'>" + OSApp.Language._( "Analog Sensor Config" ) + "</a></li>" +
-					"<li><a href='#analogsensorchart'>" + OSApp.Language._( "Show Sensor Log" ) + "</a></li>"
+					"<li><a href='#analogsensorconfig'>" + OSApp.Language._( "Sensors" ) + "</a></li>" +
+					"<li><a href='#analogsensorchart'>" + OSApp.Language._( "Sensor Log" ) + "</a></li>"
 				) : "" ) +
 			( id === "sprinklers" || id === "runonce" || id === "programs" || id === "manual" || id === "addprogram" ?
 				"</ul>" +
