@@ -187,7 +187,10 @@ OSApp.Dashboard.displayPage = function() {
 		var showArea = page.find( "#os-sensor-show" ),
 			html = "";
 
-		if ( !OSApp.Analog.checkAnalogSensorAvail() ) {
+		// Don't use checkAnalogSensorAvail() here — the feature flag may be
+		// absent even when sensors are configured.  Fall through and hide the
+		// area only if there is genuinely nothing to render.
+		if ( !OSApp.Analog.analogSensors || !OSApp.Analog.analogSensors.length ) {
 			showArea.empty().hide();
 			return;
 		}
@@ -1343,32 +1346,28 @@ OSApp.Dashboard.displayPage = function() {
 
 
 	// ── Sensor auto-refresh ──────────────────────────────────────────────────
-	// Polls /sl at the shortest ri of all visible sensors so the info-card tag
-	// stays live without requiring a full page reload.
+	// Polls /sl on a fixed 5-second cadence (matching the default sensor ri)
+	// so the info-card sensor tags stay live without a full page reload.
+	// renderSensorTiles is already called by updateContent on every datarefresh;
+	// this timer only needs to fetch fresh data from the controller.
 	var sensorRefreshTimer = null;
+	var SENSOR_POLL_MS = 5000;
 
 	function startSensorRefresh() {
 		if ( sensorRefreshTimer ) {
 			clearInterval( sensorRefreshTimer );
 			sensorRefreshTimer = null;
 		}
-		if ( !OSApp.Analog.checkAnalogSensorAvail() ) { return; }
 
-		var sensors = OSApp.Analog.analogSensors || [];
-		var minRi = 0;
-		for ( var k = 0; k < sensors.length; k++ ) {
-			if ( sensors[ k ].show && sensors[ k ].ri > 0 ) {
-				minRi = ( minRi === 0 ) ? sensors[ k ].ri : Math.min( minRi, sensors[ k ].ri );
-			}
-		}
-		if ( minRi <= 0 ) { return; }
-
+		// Don't gate on checkAnalogSensorAvail() — that feature-flag check can
+		// return false even when sensors are configured and working.  Instead,
+		// just poll /sl unconditionally and let renderSensorTiles decide whether
+		// there is anything to show.
 		sensorRefreshTimer = setInterval( function() {
-			if ( !page.hasClass( "ui-page-active" ) ) { return; }
 			OSApp.Analog.updateAnalogSensor( function() {
 				renderSensorTiles( page );
 			} );
-		}, minRi * 1000 );
+		}, SENSOR_POLL_MS );
 	}
 
 	page.one( "pageshow", function() {
@@ -1377,7 +1376,12 @@ OSApp.Dashboard.displayPage = function() {
 		startSensorRefresh();
 	} );
 
-	page.one( "pagehide", function() {
+	// Use .on (not .one) so refresh restarts if user navigates away and back.
+	page.on( "pageshow", function() {
+		startSensorRefresh();
+	} );
+
+	page.on( "pagehide", function() {
 		if ( sensorRefreshTimer ) {
 			clearInterval( sensorRefreshTimer );
 			sensorRefreshTimer = null;
