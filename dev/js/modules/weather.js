@@ -697,7 +697,11 @@ OSApp.Weather.updateWeather = function() {
                        data.providedLocation = OSApp.currentSession.controller.settings.loc;
                        OSApp.Storage.setItemSync( "weatherData", JSON.stringify( data ) );
                        OSApp.Weather.finishWeatherUpdate();
-               }
+               },
+		error: function() {
+			// Weather service unreachable — clear the spinner so the UI doesn't hang
+			OSApp.Weather.hideWeather();
+		}
        } );
 };
 
@@ -720,12 +724,22 @@ OSApp.Weather.checkURLandUpdateWeather = function() {
 	};
 
 	if ( OSApp.currentSession.controller?.settings?.wsp ) {
-		if ( OSApp.currentSession.controller.settings.wsp === "weather.opensprinkler.com" ) {
+		var wsp = OSApp.currentSession.controller.settings.wsp;
+
+		// Guard against a known firmware quirk where wsp is set to the JS app
+		// bundle URL (ui.opensprinkler.com/js) instead of the weather service.
+		// Using it would produce CORS errors; fall back to the default server.
+		if ( wsp === "weather.opensprinkler.com" ||
+		     /^https?:\/\/weather\.opensprinkler\.com/i.test( wsp ) ) {
+			finish();
+			return;
+		}
+		if ( /ui\.opensprinkler\.com/i.test( wsp ) ) {
 			finish();
 			return;
 		}
 
-		finish( OSApp.currentSession.controller?.settings?.wsp );
+		finish( wsp );
 		return;
 	}
 
