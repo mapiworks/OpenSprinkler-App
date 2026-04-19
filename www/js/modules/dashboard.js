@@ -1342,9 +1342,46 @@ OSApp.Dashboard.displayPage = function() {
 		};
 
 
+	// ── Sensor auto-refresh ──────────────────────────────────────────────────
+	// Polls /sl at the shortest ri of all visible sensors so the info-card tag
+	// stays live without requiring a full page reload.
+	var sensorRefreshTimer = null;
+
+	function startSensorRefresh() {
+		if ( sensorRefreshTimer ) {
+			clearInterval( sensorRefreshTimer );
+			sensorRefreshTimer = null;
+		}
+		if ( !OSApp.Analog.checkAnalogSensorAvail() ) { return; }
+
+		var sensors = OSApp.Analog.analogSensors || [];
+		var minRi = 0;
+		for ( var k = 0; k < sensors.length; k++ ) {
+			if ( sensors[ k ].show && sensors[ k ].ri > 0 ) {
+				minRi = ( minRi === 0 ) ? sensors[ k ].ri : Math.min( minRi, sensors[ k ].ri );
+			}
+		}
+		if ( minRi <= 0 ) { return; }
+
+		sensorRefreshTimer = setInterval( function() {
+			if ( !page.hasClass( "ui-page-active" ) ) { return; }
+			OSApp.Analog.updateAnalogSensor( function() {
+				renderSensorTiles( page );
+			} );
+		}, minRi * 1000 );
+	}
+
 	page.one( "pageshow", function() {
 		$( "html" ).on( "datarefresh", updateContent );
 		fetchLastRun();
+		startSensorRefresh();
+	} );
+
+	page.one( "pagehide", function() {
+		if ( sensorRefreshTimer ) {
+			clearInterval( sensorRefreshTimer );
+			sensorRefreshTimer = null;
+		}
 	} );
 
 	function begin( firstLoad ) {
