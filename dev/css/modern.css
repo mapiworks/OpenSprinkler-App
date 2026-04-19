@@ -151,31 +151,13 @@ button.ui-btn-active {
    ============================================================ */
 
 #os-stations-list,
-#os-running-stations,
-#os-sensor-show {
+#os-running-stations {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   gap: 10px !important;
   max-width: 640px;
   margin: 0 auto !important;
   padding: 0 !important;
-}
-
-/* Program-adjustment row spans both columns and sits above sensor tiles */
-.prog-adjust-row {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.prog-adjust-label {
-  font-size: 12px;
-  color: var(--os-text-muted);
-  background: var(--os-card-bg);
-  border: 1px solid var(--os-border);
-  border-radius: 99px;
-  padding: 3px 10px;
 }
 
 /* ============================================================
@@ -507,36 +489,65 @@ a.ui-btn-active {
 ::-webkit-scrollbar-thumb { background: var(--os-border); border-radius: 99px; }
 
 /* ============================================================
-   SENSOR TILES
+   SENSOR TAGS (inside info card)
    ============================================================ */
 
-/* Large numeric reading centred in the tile */
-.sensor-reading {
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-  justify-content: center;
+/* Row of tags that appears inside the info card when sensors are enabled */
+.sensor-tag-row {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid var(--os-border);
 }
 
-.sensor-val {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--os-primary);
-  letter-spacing: -1px;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.sensor-unit {
+/* Individual pill tag */
+.sensor-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--os-primary-light);
+  color: var(--os-primary-dark);
+  border-radius: 99px;
+  padding: 4px 11px 4px 8px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--os-text-muted);
-  line-height: 1;
+  white-space: nowrap;
 }
 
-/* Sensor tile doesn't have a gear — icon pill sits alone on the left */
-.sensor-tile .tile-row-top {
-  justify-content: flex-start;
+.sensor-tag-icon svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.sensor-tag-name {
+  color: var(--os-text-secondary);
+  font-weight: 400;
+}
+
+.sensor-tag-name::after {
+  content: ":";
+}
+
+.sensor-tag-val {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+
+.sensor-tag-unit {
+  color: var(--os-text-muted);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+/* Program-adjustment pill — slightly muted style */
+.prog-adjust-tag {
+  background: var(--os-card-bg);
+  color: var(--os-text-muted);
+  border: 1px solid var(--os-border);
 }
 
 /* ============================================================

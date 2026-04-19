@@ -181,22 +181,21 @@ OSApp.Dashboard.displayPage = function() {
 		'<path d="M4.5 16.5a8 8 0 1 1 15 0"/>' +
 		'<path d="M12 8l2.5 4.5"/></svg>';
 
-	// Renders HomeKit-style sensor tiles for all sensors with show===true.
-	// Replaces the plain-label updateSensorShowArea call on the dashboard.
+	// Renders sensor readings as compact tags inside the info card.
+	// Sensors with show===true appear as pills: icon + name + value + unit.
 	function renderSensorTiles( page ) {
 		var showArea = page.find( "#os-sensor-show" ),
 			html = "";
 
 		if ( !OSApp.Analog.checkAnalogSensorAvail() ) {
-			showArea.html( "" );
+			showArea.empty().hide();
 			return;
 		}
 
-		var i, j, sensor, progAdjust, sensorName, progName, val;
+		var i, j, sensor, progAdjust, sensorName, progName, val, hasContent = false;
 
-		// Program adjustments — compact inline labels above the tile grid
+		// Program adjustments as pills
 		if ( OSApp.Analog.progAdjusts && OSApp.Analog.progAdjusts.length ) {
-			html += "<div class='prog-adjust-row'>";
 			for ( i = 0; i < OSApp.Analog.progAdjusts.length; i++ ) {
 				progAdjust = OSApp.Analog.progAdjusts[ i ];
 				sensorName = "";
@@ -209,61 +208,58 @@ OSApp.Dashboard.displayPage = function() {
 				if ( progAdjust.prog >= 1 && progAdjust.prog <= OSApp.currentSession.controller.programs.pd.length ) {
 					progName = OSApp.Programs.readProgram( OSApp.currentSession.controller.programs.pd[ progAdjust.prog - 1 ] ).name;
 				}
-				html += "<span class='prog-adjust-label' id='progAdjust-show-" + progAdjust.nr + "'>" +
+				html += "<span class='sensor-tag prog-adjust-tag' id='progAdjust-show-" + progAdjust.nr + "'>" +
 					sensorName + " \u2192 " + progName + ": " + Math.round( progAdjust.current * 100 ) + "%" +
 					"</span>";
+				hasContent = true;
 			}
-			html += "</div>";
 		}
 
-		// Sensor tiles
+		// Sensor reading tags
 		if ( OSApp.Analog.analogSensors ) {
 			for ( i = 0; i < OSApp.Analog.analogSensors.length; i++ ) {
 				sensor = OSApp.Analog.analogSensors[ i ];
 				if ( !sensor.show ) { continue; }
 				val = Number( Math.round( sensor.data + "e+2" ) + "e-2" );
-				html += "<div class='card idle sensor-tile' id='sensor-show-" + sensor.nr + "'>" +
-					"<div class='ui-body ui-body-a tile-inner'>" +
-					"<div class='tile-row-top'>" +
-					"<div class='tile-icon-pill'>" + ICON_GAUGE + "</div>" +
-					"</div>" +
-					"<div class='tile-row-mid'>" +
-					"<div class='sensor-reading'>" +
-					"<span class='sensor-val'>" + val + "</span>" +
-					"<span class='sensor-unit'>" + ( sensor.unit || "" ) + "</span>" +
-					"</div>" +
-					"</div>" +
-					"<div class='tile-row-bot'>" +
-					"<p class='tile-name'>" + sensor.name + "</p>" +
-					"</div>" +
-					"</div>" +
-					"</div>";
+				html += "<span class='sensor-tag' id='sensor-show-" + sensor.nr + "'>" +
+					"<span class='sensor-tag-icon'>" + ICON_GAUGE + "</span>" +
+					"<span class='sensor-tag-name'>" + sensor.name + "</span>" +
+					"<span class='sensor-tag-val'>" + val + "</span>" +
+					( sensor.unit ? "<span class='sensor-tag-unit'>" + sensor.unit + "</span>" : "" ) +
+					"</span>";
+				hasContent = true;
 			}
 		}
 
-		showArea.html( html );
+		if ( hasContent ) {
+			showArea.html( html ).show();
+		} else {
+			showArea.empty().hide();
+		}
 	}
 
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
-					'<div class="ui-grid-a ui-body ui-corner-all info-card noweather">' +
-						'<div class="ui-block-a center">' +
-							'<div id="weather" class="pointer"></div>' +
-							'<div id="restr-active" class="pointer settings-weather' + (( OSApp.currentSession.controller.settings?.wtrestr || 0 > 0 ) ? '' : ' hidden') + '">' +
-								'<span class="bold blue-text">' + OSApp.Language._("Weather Restriction Active") + '</span>' +
+					'<div class="ui-body ui-corner-all info-card noweather">' +
+						'<div class="ui-grid-a">' +
+							'<div class="ui-block-a center">' +
+								'<div id="weather" class="pointer"></div>' +
+								'<div id="restr-active" class="pointer settings-weather' + (( OSApp.currentSession.controller.settings?.wtrestr || 0 > 0 ) ? '' : ' hidden') + '">' +
+									'<span class="bold blue-text">' + OSApp.Language._("Weather Restriction Active") + '</span>' +
+								'</div>' +
+							'</div>' +
+							'<div class="ui-block-b center settings-weather home-info pointer">' +
+								'<div class="sitename bold"></div>' +
+								'<div id="clock-s" class="nobr"></div>' +
+								'<div id="water-level">' +
+									OSApp.Language._("Water Level") + ': <span class="waterlevel"></span>%' +
+								'</div>' +
 							'</div>' +
 						'</div>' +
-						'<div class="ui-block-b center settings-weather home-info pointer">' +
-							'<div class="sitename bold"></div>' +
-							'<div id="clock-s" class="nobr"></div>' +
-							'<div id="water-level">' +
-								OSApp.Language._("Water Level") + ': <span class="waterlevel"></span>%' +
-							'</div>' +
-						'</div>' +
+						'<div id="os-sensor-show" class="sensor-tag-row" style="display:none"></div>' +
 					'</div>' +
 					'<div id="os-stations-list" class="card-group center"></div>' +
-					'<div id="os-sensor-show" class="card-group center"></div>' +
 				'</div>' +
 			'</div>' +
 		'</div>';
