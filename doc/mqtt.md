@@ -195,6 +195,34 @@ Go to **Sensors → Add Sensor** and set type to **MQTT Subscription**.
 
 Use [MQTT Explorer](https://mqtt-explorer.com/) to browse live topics and identify the correct path and field name. Many LoRaWAN sensors transmit only every 10–15 minutes, so allow time for a packet to arrive.
 
+### Example: Shelly Voltmeter as a Pressure Sensor
+
+Shelly devices publish JSON payloads to topics like `shelly/<location>/events`. The payload is nested:
+
+```json
+{
+  "params": {
+    "voltmeter:200": {
+      "id": 200,
+      "voltage": 2.14,
+      "xvoltage": 4.18
+    }
+  }
+}
+```
+
+In this setup `xvoltage` carries the pressure in bar (calculated from voltage by the Shelly firmware). OpenSprinkler's recursive JSON field search will find `xvoltage` anywhere in the payload tree.
+
+| Field | Value |
+|---|---|
+| **Topic** | `shelly/garage/pumpe/druck/events` |
+| **Filter** | `xvoltage` |
+| **Name** | Wasserdruck |
+| **Unit** | bar |
+| **Show on Dashboard** | ✓ |
+
+After saving, navigate to the Dashboard — the sensor tile will appear alongside the station grid, updating each time the Shelly publishes a new reading (typically every 10–60 seconds).
+
 ### Mapping Sensor Values to Watering
 
 The raw sensor value becomes the watering level percentage directly. To control the behaviour you want, configure the sensor's min/max scaling in the sensor settings:

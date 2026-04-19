@@ -177,6 +177,73 @@ OSApp.Dashboard.displayPage = function() {
 		'<circle cx="12" cy="12" r="3"/>' +
 		'<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
 
+	var ICON_GAUGE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+		'<path d="M4.5 16.5a8 8 0 1 1 15 0"/>' +
+		'<path d="M12 8l2.5 4.5"/></svg>';
+
+	// Renders HomeKit-style sensor tiles for all sensors with show===true.
+	// Replaces the plain-label updateSensorShowArea call on the dashboard.
+	function renderSensorTiles( page ) {
+		var showArea = page.find( "#os-sensor-show" ),
+			html = "";
+
+		if ( !OSApp.Analog.checkAnalogSensorAvail() ) {
+			showArea.html( "" );
+			return;
+		}
+
+		var i, j, sensor, progAdjust, sensorName, progName, val;
+
+		// Program adjustments — compact inline labels above the tile grid
+		if ( OSApp.Analog.progAdjusts && OSApp.Analog.progAdjusts.length ) {
+			html += "<div class='prog-adjust-row'>";
+			for ( i = 0; i < OSApp.Analog.progAdjusts.length; i++ ) {
+				progAdjust = OSApp.Analog.progAdjusts[ i ];
+				sensorName = "";
+				for ( j = 0; j < OSApp.Analog.analogSensors.length; j++ ) {
+					if ( OSApp.Analog.analogSensors[ j ].nr === progAdjust.sensor ) {
+						sensorName = OSApp.Analog.analogSensors[ j ].name;
+					}
+				}
+				progName = "?";
+				if ( progAdjust.prog >= 1 && progAdjust.prog <= OSApp.currentSession.controller.programs.pd.length ) {
+					progName = OSApp.Programs.readProgram( OSApp.currentSession.controller.programs.pd[ progAdjust.prog - 1 ] ).name;
+				}
+				html += "<span class='prog-adjust-label' id='progAdjust-show-" + progAdjust.nr + "'>" +
+					sensorName + " \u2192 " + progName + ": " + Math.round( progAdjust.current * 100 ) + "%" +
+					"</span>";
+			}
+			html += "</div>";
+		}
+
+		// Sensor tiles
+		if ( OSApp.Analog.analogSensors ) {
+			for ( i = 0; i < OSApp.Analog.analogSensors.length; i++ ) {
+				sensor = OSApp.Analog.analogSensors[ i ];
+				if ( !sensor.show ) { continue; }
+				val = Number( Math.round( sensor.data + "e+2" ) + "e-2" );
+				html += "<div class='card idle sensor-tile' id='sensor-show-" + sensor.nr + "'>" +
+					"<div class='ui-body ui-body-a tile-inner'>" +
+					"<div class='tile-row-top'>" +
+					"<div class='tile-icon-pill'>" + ICON_GAUGE + "</div>" +
+					"</div>" +
+					"<div class='tile-row-mid'>" +
+					"<div class='sensor-reading'>" +
+					"<span class='sensor-val'>" + val + "</span>" +
+					"<span class='sensor-unit'>" + ( sensor.unit || "" ) + "</span>" +
+					"</div>" +
+					"</div>" +
+					"<div class='tile-row-bot'>" +
+					"<p class='tile-name'>" + sensor.name + "</p>" +
+					"</div>" +
+					"</div>" +
+					"</div>";
+			}
+		}
+
+		showArea.html( html );
+	}
+
 	var content = '<div data-role="page" id="sprinklers">' +
 			'<div class="ui-panel-wrapper">' +
 				'<div class="ui-content" role="main">' +
@@ -1118,7 +1185,7 @@ OSApp.Dashboard.displayPage = function() {
 			updateSites();
 			OSApp.Dashboard.updateWaterLevel();
 			OSApp.Dashboard.updateRestrictNotice();
-			OSApp.Analog.updateSensorShowArea( page );
+			renderSensorTiles( page );
 
 			page.find( ".sitename" ).text( OSApp.currentSession.local ? OSApp.currentSession.controller.settings?.dname || "" : siteSelect.val() );
 
@@ -1306,7 +1373,7 @@ OSApp.Dashboard.displayPage = function() {
 		page.find( ".sitename" ).text( OSApp.currentSession.local ? OSApp.currentSession.controller.settings?.dname || "" : siteSelect.val() );
 		page.find( ".waterlevel" ).text( OSApp.currentSession.controller.options.wl );
 
-		OSApp.Analog.updateSensorShowArea( page );
+		renderSensorTiles( page );
 		updateClock();
 
 		page.on( "click", ".station-settings", showAttributes );
