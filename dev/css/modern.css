@@ -151,13 +151,31 @@ button.ui-btn-active {
    ============================================================ */
 
 #os-stations-list,
-#os-running-stations {
+#os-running-stations,
+#os-sensor-show {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
   gap: 10px !important;
   max-width: 640px;
   margin: 0 auto !important;
   padding: 0 !important;
+}
+
+/* Program-adjustment row spans both columns and sits above sensor tiles */
+.prog-adjust-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.prog-adjust-label {
+  font-size: 12px;
+  color: var(--os-text-muted);
+  background: var(--os-card-bg);
+  border: 1px solid var(--os-border);
+  border-radius: 99px;
+  padding: 3px 10px;
 }
 
 /* ============================================================
@@ -487,6 +505,39 @@ a.ui-btn-active {
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--os-border); border-radius: 99px; }
+
+/* ============================================================
+   SENSOR TILES
+   ============================================================ */
+
+/* Large numeric reading centred in the tile */
+.sensor-reading {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  justify-content: center;
+}
+
+.sensor-val {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--os-primary);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.sensor-unit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--os-text-muted);
+  line-height: 1;
+}
+
+/* Sensor tile doesn't have a gear — icon pill sits alone on the left */
+.sensor-tile .tile-row-top {
+  justify-content: flex-start;
+}
 
 /* ============================================================
    DISABLED / HIDDEN STATIONS
