@@ -325,9 +325,13 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 			"</label>" +
 			"<input class='name' type='text'  value='" + sensor.name + "'>" +
 
-			// ── MQTT-only fields (topic, filter, unit) ──────────────────────────
+			// ── MQTT fields (broker ip/port + topic/filter/unit) ────────────────
 			"<div id='mqtt-fields' style='display:" + ( isMqtt ? "block" : "none" ) + "'>" +
-			"<label>" + OSApp.Language._( "MQTT Topic" ) + "</label>" +
+			"<label>" + OSApp.Language._( "Broker IP" ) + "</label>" +
+			"<input class='ip' type='text' value='" + ( sensor.ip ? OSApp.Analog.toByteArray( sensor.ip ).join( "." ) : "" ) + "' placeholder='e.g. 192.168.178.24'>" +
+			"<label>" + OSApp.Language._( "Broker Port" ) + "</label>" +
+			"<input class='port' type='number' min='0' max='65535' value='" + ( sensor.port || 1883 ) + "'>" +
+			"<label>" + OSApp.Language._( "Topic" ) + "</label>" +
 			"<input class='mqtt-topic' type='text' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' value='" + ( sensor.topic || "" ) + "' placeholder='e.g. shelly/garage/pumpe/druck/events'>" +
 			"<label>" + OSApp.Language._( "JSON Filter (field name)" ) + "</label>" +
 			"<input class='mqtt-filter' type='text' autocomplete='off' autocorrect='off' autocapitalize='off' spellcheck='false' value='" + ( sensor.filter || "" ) + "' placeholder='e.g. xvoltage'>" +
@@ -335,7 +339,7 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 			"<input class='unit' type='text' value='" + ( sensor.unit || "" ) + "' placeholder='e.g. bar'>" +
 			"</div>" +
 
-			// ── Non-MQTT fields (IP, port, ID) ──────────────────────────────────
+			// ── Non-MQTT hardware sensor fields (IP, port, ID) ──────────────────
 			"<div id='network-fields' style='display:" + ( isMqtt ? "none" : "block" ) + "'>" +
 			"<label>" +
 			OSApp.Language._( "IP Address" ) +
@@ -445,8 +449,8 @@ OSApp.Analog.showSensorEditor = function( sensor, callback ) {
 				type: outType,
 				group: parseInt( popup.find( ".group" ).val() ),
 				name: popup.find( ".name" ).val(),
-				ip: outMqtt ? 0 : OSApp.Analog.intFromBytes( popup.find( ".ip" ).val().split( "." ) ),
-				port: outMqtt ? 0 : parseInt( popup.find( ".port" ).val() ),
+				ip: OSApp.Analog.intFromBytes( popup.find( ".ip" ).val().split( "." ) ),
+				port: parseInt( popup.find( ".port" ).val() ),
 				id: outMqtt ? 0 : parseInt( popup.find( ".id" ).val() ),
 				ri: parseInt( popup.find( ".ri" ).val() ),
 				fac: parseInt( popup.find( ".fac" ).val() ),
