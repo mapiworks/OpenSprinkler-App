@@ -306,7 +306,8 @@ OSApp.UIDom.showHomeMenu = ( function() {
 		diagnostics: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10h3l2-6 3 12 2-6h4'/></svg>",
 		exportcfg: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M13 8V3H7v5H4l6 6 6-6h-3z'/><line x1='4' y1='17' x2='16' y2='17'/></svg>",
 		importcfg: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M7 12v5h6v-5h3l-6-6-6 6h3z'/><line x1='4' y1='3' x2='16' y2='3'/></svg>",
-		about:     "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='10' cy='10' r='8'/><line x1='10' y1='9' x2='10' y2='14'/><circle cx='10' cy='6.5' r='0.75' fill='currentColor' stroke='none'/></svg>"
+		about:     "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='10' cy='10' r='8'/><line x1='10' y1='9' x2='10' y2='14'/><circle cx='10' cy='6.5' r='0.75' fill='currentColor' stroke='none'/></svg>",
+		update:    "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M10 3v9'/><path d='M6 8l4-5 4 5'/><path d='M4 14v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1'/></svg>"
 	};
 
 	function tile( href, icon, label, extraClass ) {
@@ -340,7 +341,8 @@ OSApp.UIDom.showHomeMenu = ( function() {
 			tile( "#diagnostics",  MENU_ICONS.diagnostics, OSApp.Language._( "System Info" ) ) +
 			tile( "#export-config", MENU_ICONS.exportcfg,  OSApp.Language._( "Export Config" ) ) +
 			tile( "#import-config", MENU_ICONS.importcfg,  OSApp.Language._( "Import Config" ) ) +
-			tile( "#about",        MENU_ICONS.about,       OSApp.Language._( "About" ) );
+			tile( "#about",        MENU_ICONS.about,       OSApp.Language._( "About" ) ) +
+			tile( "#check-update", MENU_ICONS.update,      OSApp.Language._( "Check Updates" ) );
 
 		var actions = "<div class='menu-action-bar'>" +
 			( onDashboard ?
@@ -407,6 +409,9 @@ OSApp.UIDom.showHomeMenu = ( function() {
 				OSApp.Storage.get( "backup", function( newdata ) {
 					OSApp.ImportExport.getImportMethod( newdata.backup );
 				} );
+			} else if ( href === "#check-update" ) {
+				OSApp.Firmware.checkFirmwareUpdate();
+				OSApp.Errors.showError( OSApp.Language._( "Checking for firmware updates..." ) );
 			} else {
 				OSApp.UIDom.checkChanges( function() {
 					OSApp.UIDom.changePage( href );
