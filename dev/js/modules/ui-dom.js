@@ -302,7 +302,11 @@ OSApp.UIDom.showHomeMenu = ( function() {
 		pause:     "<svg viewBox='0 0 20 20' fill='currentColor'><rect x='4' y='4' width='4.5' height='12' rx='1'/><rect x='11.5' y='4' width='4.5' height='12' rx='1'/></svg>",
 		eyeshow:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 10s3.3-6 8-6 8 6 8 6-3.3 6-8 6-8-6-8-6z'/><circle cx='10' cy='10' r='2.5'/><line x1='3' y1='3' x2='17' y2='17'/></svg>",
 		eyehide:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 10s3.3-6 8-6 8 6 8 6-3.3 6-8 6-8-6-8-6z'/><circle cx='10' cy='10' r='2.5'/></svg>",
-		stop:      "<svg viewBox='0 0 20 20' fill='currentColor'><rect x='4' y='4' width='12' height='12' rx='2'/></svg>"
+		stop:      "<svg viewBox='0 0 20 20' fill='currentColor'><rect x='4' y='4' width='12' height='12' rx='2'/></svg>",
+		diagnostics: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10h3l2-6 3 12 2-6h4'/></svg>",
+		exportcfg: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M13 8V3H7v5H4l6 6 6-6h-3z'/><line x1='4' y1='17' x2='16' y2='17'/></svg>",
+		importcfg: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M7 12v5h6v-5h3l-6-6-6 6h3z'/><line x1='4' y1='3' x2='16' y2='3'/></svg>",
+		about:     "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='10' cy='10' r='8'/><line x1='10' y1='9' x2='10' y2='14'/><circle cx='10' cy='6.5' r='0.75' fill='currentColor' stroke='none'/></svg>"
 	};
 
 	function tile( href, icon, label, extraClass ) {
@@ -332,7 +336,11 @@ OSApp.UIDom.showHomeMenu = ( function() {
 					OSApp.StationQueue.isPaused() ? OSApp.Language._( "Change Pause" ) : OSApp.Language._( "Pause Station Runs" ) ) : "" ) +
 			( OSApp.Analog.checkAnalogSensorAvail() ?
 				tile( "#analogsensorconfig", MENU_ICONS.sensors,   OSApp.Language._( "Sensors" ) ) +
-				tile( "#analogsensorchart",  MENU_ICONS.sensorlog, OSApp.Language._( "Sensor Log" ) ) : "" );
+				tile( "#analogsensorchart",  MENU_ICONS.sensorlog, OSApp.Language._( "Sensor Log" ) ) : "" ) +
+			tile( "#diagnostics",  MENU_ICONS.diagnostics, OSApp.Language._( "System Info" ) ) +
+			tile( "#export-config", MENU_ICONS.exportcfg,  OSApp.Language._( "Export Config" ) ) +
+			tile( "#import-config", MENU_ICONS.importcfg,  OSApp.Language._( "Import Config" ) ) +
+			tile( "#about",        MENU_ICONS.about,       OSApp.Language._( "About" ) );
 
 		var actions = "<div class='menu-action-bar'>" +
 			( onDashboard ?
@@ -385,6 +393,20 @@ OSApp.UIDom.showHomeMenu = ( function() {
 				OSApp.Weather.showRainDelay();
 			} else if ( href === "#globalpause" ) {
 				OSApp.UIDom.showPause();
+			} else if ( href === "#diagnostics" ) {
+				OSApp.SystemDiagnostics.showDiagnostics();
+			} else if ( href === "#export-config" ) {
+				if ( typeof OSApp.currentSession.controller.stations.stn_spe === "object" &&
+					typeof OSApp.currentSession.controller.special !== "object" &&
+					!OSApp.currentSession.controller.stations.stn_spe.every( function( e ) { return e === 0; } ) ) {
+					OSApp.Sites.updateControllerStationSpecial( OSApp.ImportExport.getExportMethod );
+				} else {
+					OSApp.ImportExport.getExportMethod();
+				}
+			} else if ( href === "#import-config" ) {
+				OSApp.Storage.get( "backup", function( newdata ) {
+					OSApp.ImportExport.getImportMethod( newdata.backup );
+				} );
 			} else {
 				OSApp.UIDom.checkChanges( function() {
 					OSApp.UIDom.changePage( href );
