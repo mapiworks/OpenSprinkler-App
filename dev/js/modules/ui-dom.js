@@ -289,38 +289,66 @@ OSApp.UIDom.launchApp = function() {
 OSApp.UIDom.showHomeMenu = ( function() {
 	var page, id, showHidden, popup;
 
+	// SVG icons for the tile menu
+	var MENU_ICONS = {
+		programs:  "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='4' width='14' height='13' rx='2'/><path d='M7 2v4M13 2v4M3 8h14'/></svg>",
+		options:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'><circle cx='10' cy='10' r='2.5'/><path d='M10 2v2M10 16v2M2 10h2M16 10h2M4.93 4.93l1.41 1.41M13.66 13.66l1.41 1.41M4.93 15.07l1.41-1.41M13.66 6.34l1.41-1.41'/></svg>",
+		preview:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 10s3.3-6 8-6 8 6 8 6-3.3 6-8 6-8-6-8-6z'/><circle cx='10' cy='10' r='2.5'/></svg>",
+		logs:      "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round'><path d='M4 6h12M4 10h12M4 14h8'/></svg>",
+		sensors:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M10 3v7'/><circle cx='10' cy='14' r='3'/><rect x='8.5' y='2.5' width='3' height='9' rx='1.5'/></svg>",
+		sensorlog: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='3,14 7,9 11,12 17,5'/><line x1='3' y1='17' x2='17' y2='17'/></svg>",
+		raindelay: "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M4 12a5 5 0 1 1 9.9-1H15a3 3 0 0 1 0 6H5a3 3 0 0 1-1-5.83'/><path d='M7 17v2M10 16v2M13 17v2'/></svg>",
+		runonce:   "<svg viewBox='0 0 20 20' fill='currentColor'><path d='M6 4l11 6-11 6V4z'/></svg>",
+		pause:     "<svg viewBox='0 0 20 20' fill='currentColor'><rect x='4' y='4' width='4.5' height='12' rx='1'/><rect x='11.5' y='4' width='4.5' height='12' rx='1'/></svg>",
+		eyeshow:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 10s3.3-6 8-6 8 6 8 6-3.3 6-8 6-8-6-8-6z'/><circle cx='10' cy='10' r='2.5'/><line x1='3' y1='3' x2='17' y2='17'/></svg>",
+		eyehide:   "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M2 10s3.3-6 8-6 8 6 8 6-3.3 6-8 6-8-6-8-6z'/><circle cx='10' cy='10' r='2.5'/></svg>",
+		stop:      "<svg viewBox='0 0 20 20' fill='currentColor'><rect x='4' y='4' width='12' height='12' rx='2'/></svg>"
+	};
+
+	function tile( href, icon, label, extraClass ) {
+		return "<a href='" + href + "' class='menu-tile" + ( extraClass ? " " + extraClass : "" ) + "'>" +
+			"<span class='menu-tile-icon'>" + icon + "</span>" +
+			"<span class='menu-tile-label'>" + label + "</span>" +
+		"</a>";
+	}
+
 	function makeMenu() {
 		page = $( ".ui-page-active" );
 		id = page.attr( "id" );
 		showHidden = page.hasClass( "show-hidden" );
-		popup = $( "<div data-role='popup' data-theme='a' id='mainMenu'>" +
-			"<ul data-role='listview' data-inset='true' data-corners='false'>" +
-				"<li data-role='list-divider'>" + OSApp.Language._( "Information" ) + "</li>" +
-				"<li><a href='#preview' class='squeeze'>" + OSApp.Language._( "Preview Programs" ) + "</a></li>" +
-				( OSApp.Firmware.checkOSVersion( 206 ) || OSApp.Firmware.checkOSPiVersion( "1.9" ) ? "<li><a href='#logs'>" + OSApp.Language._( "View Logs" ) + "</a></li>" : "" ) +
-				"<li data-role='list-divider'>" + OSApp.Language._( "Programs and Settings" ) + "</li>" +
-				"<li><a href='#raindelay'>" + OSApp.Language._( "Change Rain Delay" ) + "</a></li>" +
-				( OSApp.Supported.pausing() ?
-					( OSApp.StationQueue.isPaused() ? "<li><a href='#globalpause'>" + OSApp.Language._( "Change Pause" ) + "</a></li>"
-						: ( "<li><a href='#globalpause'>" + OSApp.Language._( "Pause Station Runs" ) + "</a></li>" ) )
-					: "" ) +
-				"<li><a href='#runonce'>" + OSApp.Language._( "Run-Once Program" ) + "</a></li>" +
-				"<li><a href='#programs'>" + OSApp.Language._( "Edit Programs" ) + "</a></li>" +
-				"<li><a href='#os-options'>" + OSApp.Language._( "Edit Options" ) + "</a></li>" +
 
-				( OSApp.Analog.checkAnalogSensorAvail() ? (
-					"<li><a href='#analogsensorconfig'>" + OSApp.Language._( "Sensors" ) + "</a></li>" +
-					"<li><a href='#analogsensorchart'>" + OSApp.Language._( "Sensor Log" ) + "</a></li>"
-				) : "" ) +
-			( id === "sprinklers" || id === "runonce" || id === "programs" || id === "manual" || id === "addprogram" ?
-				"</ul>" +
-				"<div class='ui-grid-a ui-mini tight'>" +
-					"<div class='ui-block-a'><a class='ui-btn tight' href='#show-hidden'>" +
-						( showHidden ? OSApp.Language._( "Hide" ) : OSApp.Language._( "Show" ) ) + " " + OSApp.Language._( "Disabled" ) +
-					"</a></div>" +
-					"<div class='ui-block-b'><a class='ui-btn red tight' href='#stop-all'>" + OSApp.Language._( "Stop All Stations" ) + "</a></div>" +
-				"</div>"
-				: "<li><a class='ui-btn red' href='#stop-all'>" + OSApp.Language._( "Stop All Stations" ) + "</a></li></ul>" ) +
+		var onDashboard = id === "sprinklers" || id === "runonce" || id === "programs" || id === "manual" || id === "addprogram";
+
+		var tiles =
+			tile( "#programs",         MENU_ICONS.programs,  OSApp.Language._( "Edit Programs" ) ) +
+			tile( "#os-options",       MENU_ICONS.options,   OSApp.Language._( "Edit Options" ) ) +
+			tile( "#preview",          MENU_ICONS.preview,   OSApp.Language._( "Preview Programs" ) ) +
+			( OSApp.Firmware.checkOSVersion( 206 ) || OSApp.Firmware.checkOSPiVersion( "1.9" ) ?
+				tile( "#logs", MENU_ICONS.logs, OSApp.Language._( "View Logs" ) ) : "" ) +
+			tile( "#raindelay",        MENU_ICONS.raindelay, OSApp.Language._( "Change Rain Delay" ) ) +
+			tile( "#runonce",          MENU_ICONS.runonce,   OSApp.Language._( "Run-Once Program" ) ) +
+			( OSApp.Supported.pausing() ?
+				tile( "#globalpause", MENU_ICONS.pause,
+					OSApp.StationQueue.isPaused() ? OSApp.Language._( "Change Pause" ) : OSApp.Language._( "Pause Station Runs" ) ) : "" ) +
+			( OSApp.Analog.checkAnalogSensorAvail() ?
+				tile( "#analogsensorconfig", MENU_ICONS.sensors,   OSApp.Language._( "Sensors" ) ) +
+				tile( "#analogsensorchart",  MENU_ICONS.sensorlog, OSApp.Language._( "Sensor Log" ) ) : "" );
+
+		var actions = "<div class='menu-action-bar'>" +
+			( onDashboard ?
+				"<a href='#show-hidden' class='menu-action-btn menu-action-secondary'>" +
+					"<span class='menu-tile-icon'>" + ( showHidden ? MENU_ICONS.eyeshow : MENU_ICONS.eyehide ) + "</span>" +
+					( showHidden ? OSApp.Language._( "Hide" ) : OSApp.Language._( "Show" ) ) + " " + OSApp.Language._( "Disabled" ) +
+				"</a>" : "" ) +
+			"<a href='#stop-all' class='menu-action-btn menu-action-danger'>" +
+				"<span class='menu-tile-icon'>" + MENU_ICONS.stop + "</span>" +
+				OSApp.Language._( "Stop All Stations" ) +
+			"</a>" +
+		"</div>";
+
+		popup = $( "<div data-role='popup' data-theme='a' id='mainMenu'>" +
+			"<div class='menu-tile-grid'>" + tiles + "</div>" +
+			actions +
 		"</div>" );
 	}
 
