@@ -486,6 +486,24 @@ a.ui-btn-active {
   border-radius: var(--os-radius-lg) var(--os-radius-lg) 0 0 !important;
 }
 
+/* Main menu bottom action row: stack buttons vertically so German
+   (and other long translations) never get truncated in a 50/50 split. */
+#mainMenu .ui-grid-a {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  padding: 8px !important;
+}
+#mainMenu .ui-grid-a .ui-block-a,
+#mainMenu .ui-grid-a .ui-block-b {
+  width: 100% !important;
+  float: none !important;
+}
+#mainMenu .ui-grid-a .ui-btn {
+  margin: 0 !important;
+  white-space: normal !important;
+}
+
 /* ============================================================
    LIST ITEMS
    ============================================================ */
