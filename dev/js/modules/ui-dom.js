@@ -600,6 +600,62 @@ OSApp.UIDom.initAppData = function() {
 	setTimeout( function() {
 		OSApp.Sites.checkConfigured( true );
 	}, 200 );
+
+	// Global swipe-left-to-close for all popups.
+	// Bound once at init on the document so it is immune to per-element
+	// stopPropagation calls and timing issues with popupafteropen.
+	// Uses only touchstart + touchend (always fire, always passive-safe).
+	// touchmove is added solely for the visual drag-follow effect.
+	( function() {
+		var startX = 0, startY = 0, el = null, dragging = false;
+
+		document.addEventListener( "touchstart", function( e ) {
+			el = null;
+			dragging = false;
+			var popupEl = document.querySelector( ".ui-popup-active [data-role='popup']" );
+			if ( !popupEl ) { return; }
+			if ( popupEl !== e.target && !popupEl.contains( e.target ) ) { return; }
+			startX = e.touches[ 0 ].clientX;
+			startY = e.touches[ 0 ].clientY;
+			el     = popupEl;
+			el.style.transition = "none";
+		}, { passive: true } );
+
+		document.addEventListener( "touchmove", function( e ) {
+			if ( !el ) { return; }
+			var dx = e.touches[ 0 ].clientX - startX;
+			var dy = Math.abs( e.touches[ 0 ].clientY - startY );
+			// abort if gesture is primarily vertical (let the popup scroll)
+			if ( !dragging && dy > Math.abs( dx ) ) { el = null; return; }
+			dragging = true;
+			if ( dx < 0 ) {
+				el.style.transform = "translateX(" + dx + "px)";
+				el.style.opacity   = Math.max( 0.3, 1 + dx / 200 );
+			}
+		}, { passive: true } );
+
+		document.addEventListener( "touchend", function( e ) {
+			if ( !el ) { return; }
+			var target = el;
+			el       = null;
+			var dx   = e.changedTouches[ 0 ].clientX - startX;
+			var dy   = Math.abs( e.changedTouches[ 0 ].clientY - startY );
+			if ( dx < -60 && Math.abs( dx ) > dy ) {
+				// Dismiss: slide out
+				target.style.transition = "transform 0.18s ease, opacity 0.18s ease";
+				target.style.transform  = "translateX(-110%)";
+				target.style.opacity    = "0";
+				setTimeout( function() { $( target ).popup( "close" ); }, 160 );
+			} else {
+				// Snap back
+				target.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+				target.style.transform  = "";
+				target.style.opacity    = "";
+				setTimeout( function() { target.style.transition = ""; }, 230 );
+			}
+			dragging = false;
+		}, { passive: true } );
+	} )();
 };
 
 OSApp.UIDom.focusInput = function() {
@@ -788,69 +844,6 @@ OSApp.UIDom.openPopup = function( popup, args ) {
 	} ).popup( args ).enhanceWithin();
 
 	popup.popup( "open" );
-
-	// Swipe-left-to-close.
-	// Strategy: use jQuery Mobile's built-in swipeleft event for reliable detection
-	// (jQM binds at document level so it's immune to child stopPropagation calls),
-	// combined with raw touch listeners for the visual drag-follow effect.
-	// touch-action:pan-y on the element (set in CSS) tells the browser to handle
-	// vertical scroll natively and pass horizontal moves to JS — without this the
-	// browser locks the gesture for scrolling before our touchmove ever fires.
-	popup.one( "popupafteropen", function() {
-		var el     = popup[ 0 ],
-			startX = 0,
-			swiped = false;   // flag so touchend snap-back doesn't fight swipeleft
-
-		// Visual drag follow — passive:true is fine here because touch-action:pan-y
-		// already told the browser not to handle horizontal gestures itself.
-		function onStart( e ) {
-			startX = e.touches[ 0 ].clientX;
-			swiped = false;
-			el.style.transition = "none";
-		}
-
-		function onMove( e ) {
-			var dx = e.touches[ 0 ].clientX - startX;
-			if ( dx < 0 ) {
-				el.style.transform = "translateX(" + dx + "px)";
-				el.style.opacity   = Math.max( 0.3, 1 + dx / 200 );
-			}
-		}
-
-		function onEnd() {
-			// Let jQM's swipeleft fire first (it runs synchronously in touchend),
-			// then check if it fired via the flag.
-			setTimeout( function() {
-				if ( !swiped ) {
-					// Not a full swipe — snap back
-					el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
-					el.style.transform  = "";
-					el.style.opacity    = "";
-					setTimeout( function() { el.style.transition = ""; }, 230 );
-				}
-			}, 0 );
-		}
-
-		el.addEventListener( "touchstart", onStart, { passive: true } );
-		el.addEventListener( "touchmove",  onMove,  { passive: true } );
-		el.addEventListener( "touchend",   onEnd,   { passive: true } );
-
-		// jQM's swipeleft fires when horizontal travel > 30 px and vertical < 75 px
-		popup.on( "swipeleft.dismiss", function() {
-			swiped = true;
-			el.style.transition = "transform 0.18s ease, opacity 0.18s ease";
-			el.style.transform  = "translateX(-110%)";
-			el.style.opacity    = "0";
-			setTimeout( function() { popup.popup( "close" ); }, 160 );
-		} );
-
-		popup.one( "popupafterclose", function() {
-			el.removeEventListener( "touchstart", onStart );
-			el.removeEventListener( "touchmove",  onMove );
-			el.removeEventListener( "touchend",   onEnd );
-			popup.off( "swipeleft.dismiss" );
-		} );
-	} );
 };
 
 OSApp.UIDom.closePanel = function( callback ) {
