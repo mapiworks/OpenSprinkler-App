@@ -590,6 +590,20 @@ a.ui-btn-active {
   background: #D93025;
 }
 
+.menu-tile.menu-tile-danger {
+  background: #FF3B30;
+  color: #fff !important;
+}
+
+.menu-tile.menu-tile-danger .menu-tile-icon {
+  color: #fff;
+}
+
+.menu-tile.menu-tile-danger:hover,
+.menu-tile.menu-tile-danger:active {
+  background: #D93025;
+}
+
 /* Legacy grid fix — kept for safety in case old markup persists */
 #mainMenu .ui-grid-a {
   display: flex !important;
