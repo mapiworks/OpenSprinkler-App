@@ -949,32 +949,114 @@ a.ui-btn-active {
 .mqtt-pill-sub   { background: #EBF5FB; color: #1A5276; }
 .mqtt-pill-other { background: #F2F2F7; color: #636366; }
 
+/* Filter bar */
+.mqtt-filterbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mqtt-filter-icon {
+  font-size: 16px;
+  color: var(--os-text-muted);
+  flex-shrink: 0;
+}
+.mqtt-filterinput {
+  flex: 1;
+  background: #2C2C2E;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  padding: 5px 9px;
+  outline: none;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+}
+.mqtt-filterinput::placeholder { color: #636366; }
+.mqtt-filter-all.ui-btn {
+  margin: 0;
+  flex-shrink: 0;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+
 /* Message feed */
 .mqtt-feed {
   background: #1C1C1E;
   border-radius: var(--os-radius-md);
-  padding: 10px 8px;
-  height: calc(100vh - 280px);
+  padding: 6px 0;
+  height: calc(100vh - 300px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
   font-size: 11px;
 }
 
+/* Row — collapsed */
 .mqtt-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 3px 0;
+  padding: 4px 10px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
-  flex-wrap: wrap;
-  line-height: 1.4;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.mqtt-row:active { background: rgba(255,255,255,0.06); }
+
+.mqtt-row-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
-.mqtt-ts      { color: #636366; min-width: 86px; flex-shrink: 0; }
-.mqtt-topic   { flex-shrink: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mqtt-payload { color: #EBEBF5CC; flex: 1; word-break: break-all; }
+.mqtt-ts      { color: #636366; min-width: 84px; flex-shrink: 0; }
+.mqtt-topic   { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #EBEBF5CC; }
+.mqtt-chevron { color: #636366; flex-shrink: 0; font-size: 10px; transition: transform 0.15s; }
+
+/* Collapsed preview line */
+.mqtt-row-preview {
+  color: #636366;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 90px;   /* indent under timestamp */
+  font-size: 10.5px;
+}
+
+/* Expanded detail — hidden by default */
+.mqtt-row-detail {
+  display: none;
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: #2C2C2E;
+  border-radius: 6px;
+}
+.mqtt-row[data-expanded="1"] .mqtt-row-detail { display: block; }
+.mqtt-row[data-expanded="1"] .mqtt-row-preview { display: none; }
+.mqtt-row[data-expanded="1"] .mqtt-chevron { transform: rotate(90deg); }
+
+.mqtt-detail-topic {
+  color: #EBEBF599;
+  font-size: 11px;
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+.mqtt-detail-payload {
+  background: #1C1C1E;
+  border-radius: 4px;
+  padding: 8px;
+  margin: 0;
+  color: #A8FF78;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 260px;
+  overflow-y: auto;
+}
 
 .mqtt-row-pub   .mqtt-topic { color: #30D158; }
 .mqtt-row-sub   .mqtt-topic { color: #64D2FF; }
 .mqtt-row-other .mqtt-topic { color: #EBEBF599; }
+
+.mqtt-payload { color: #EBEBF5CC; flex: 1; word-break: break-all; }
