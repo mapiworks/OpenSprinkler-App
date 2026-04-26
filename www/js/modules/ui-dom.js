@@ -789,66 +789,66 @@ OSApp.UIDom.openPopup = function( popup, args ) {
 
 	popup.popup( "open" );
 
-	// Swipe-left-to-close: horizontal swipe doesn't conflict with vertical scrolling
+	// Swipe-left-to-close.
+	// Strategy: use jQuery Mobile's built-in swipeleft event for reliable detection
+	// (jQM binds at document level so it's immune to child stopPropagation calls),
+	// combined with raw touch listeners for the visual drag-follow effect.
+	// touch-action:pan-y on the element (set in CSS) tells the browser to handle
+	// vertical scroll natively and pass horizontal moves to JS — without this the
+	// browser locks the gesture for scrolling before our touchmove ever fires.
 	popup.one( "popupafteropen", function() {
-		var el        = popup[ 0 ],
-			startX    = 0,
-			startY    = 0,
-			dragging  = false,
-			THRESHOLD = 80;   // px leftward travel needed to dismiss
+		var el     = popup[ 0 ],
+			startX = 0,
+			swiped = false;   // flag so touchend snap-back doesn't fight swipeleft
 
+		// Visual drag follow — passive:true is fine here because touch-action:pan-y
+		// already told the browser not to handle horizontal gestures itself.
 		function onStart( e ) {
-			var t = e.touches[ 0 ];
-			startX   = t.clientX;
-			startY   = t.clientY;
-			dragging = false;
+			startX = e.touches[ 0 ].clientX;
+			swiped = false;
 			el.style.transition = "none";
 		}
 
 		function onMove( e ) {
-			var t  = e.touches[ 0 ],
-				dx = t.clientX - startX,
-				dy = Math.abs( t.clientY - startY );
-
-			// Only hijack when gesture is more horizontal than vertical
-			if ( !dragging ) {
-				if ( Math.abs( dx ) < 8 && dy < 8 ) { return; }      // hasn't moved enough yet
-				if ( dy > Math.abs( dx ) ) { return; }                 // mostly vertical → let scroll handle it
-				if ( dx > 0 ) { return; }                              // swiping right → ignore
-				dragging = true;
+			var dx = e.touches[ 0 ].clientX - startX;
+			if ( dx < 0 ) {
+				el.style.transform = "translateX(" + dx + "px)";
+				el.style.opacity   = Math.max( 0.3, 1 + dx / 200 );
 			}
-
-			e.preventDefault();
-			var clamped = Math.min( dx, 0 );   // only allow leftward movement
-			el.style.transform = "translateX(" + clamped + "px)";
-			el.style.opacity   = Math.max( 0.3, 1 + clamped / 200 );
 		}
 
-		function onEnd( e ) {
-			if ( !dragging ) { return; }
-			dragging = false;
-			var dx = e.changedTouches[ 0 ].clientX - startX;
-			if ( dx < -THRESHOLD ) {
-				el.style.transition = "transform 0.18s ease, opacity 0.18s ease";
-				el.style.transform  = "translateX(-110%)";
-				el.style.opacity    = "0";
-				setTimeout( function() { popup.popup( "close" ); }, 160 );
-			} else {
-				el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
-				el.style.transform  = "";
-				el.style.opacity    = "";
-				setTimeout( function() { el.style.transition = ""; }, 230 );
-			}
+		function onEnd() {
+			// Let jQM's swipeleft fire first (it runs synchronously in touchend),
+			// then check if it fired via the flag.
+			setTimeout( function() {
+				if ( !swiped ) {
+					// Not a full swipe — snap back
+					el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+					el.style.transform  = "";
+					el.style.opacity    = "";
+					setTimeout( function() { el.style.transition = ""; }, 230 );
+				}
+			}, 0 );
 		}
 
 		el.addEventListener( "touchstart", onStart, { passive: true } );
-		el.addEventListener( "touchmove",  onMove,  { passive: false } );
+		el.addEventListener( "touchmove",  onMove,  { passive: true } );
 		el.addEventListener( "touchend",   onEnd,   { passive: true } );
+
+		// jQM's swipeleft fires when horizontal travel > 30 px and vertical < 75 px
+		popup.on( "swipeleft.dismiss", function() {
+			swiped = true;
+			el.style.transition = "transform 0.18s ease, opacity 0.18s ease";
+			el.style.transform  = "translateX(-110%)";
+			el.style.opacity    = "0";
+			setTimeout( function() { popup.popup( "close" ); }, 160 );
+		} );
 
 		popup.one( "popupafterclose", function() {
 			el.removeEventListener( "touchstart", onStart );
 			el.removeEventListener( "touchmove",  onMove );
 			el.removeEventListener( "touchend",   onEnd );
+			popup.off( "swipeleft.dismiss" );
 		} );
 	} );
 };
