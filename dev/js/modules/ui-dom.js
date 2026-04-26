@@ -788,6 +788,51 @@ OSApp.UIDom.openPopup = function( popup, args ) {
 	} ).popup( args ).enhanceWithin();
 
 	popup.popup( "open" );
+
+	// Swipe-down-to-close: attach after open so the element is in the DOM
+	popup.one( "popupafteropen", function() {
+		var el       = popup[ 0 ],
+			startY   = 0,
+			startX   = 0,
+			dragging = false,
+			THRESHOLD = 72;   // px downward travel needed to dismiss
+
+		el.addEventListener( "touchstart", function( e ) {
+			// Only begin drag from the top 56 px (handle zone) so scroll inside
+			// the popup still works normally
+			var touch = e.touches[ 0 ];
+			if ( touch.clientY - el.getBoundingClientRect().top > 56 ) { return; }
+			startY   = touch.clientY;
+			startX   = touch.clientX;
+			dragging = true;
+			el.style.transition = "none";
+		}, { passive: true } );
+
+		el.addEventListener( "touchmove", function( e ) {
+			if ( !dragging ) { return; }
+			var dy = e.touches[ 0 ].clientY - startY;
+			if ( dy > 0 ) {
+				el.style.transform = "translateY(" + dy + "px)";
+				el.style.opacity   = Math.max( 0.4, 1 - dy / 220 );
+			}
+		}, { passive: true } );
+
+		el.addEventListener( "touchend", function( e ) {
+			if ( !dragging ) { return; }
+			dragging = false;
+			var dy = e.changedTouches[ 0 ].clientY - startY;
+			if ( dy > THRESHOLD ) {
+				el.style.transition = "transform 0.18s ease, opacity 0.18s ease";
+				el.style.transform  = "translateY(120%)";
+				el.style.opacity    = "0";
+				setTimeout( function() { popup.popup( "close" ); }, 160 );
+			} else {
+				el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
+				el.style.transform  = "";
+				el.style.opacity    = "";
+			}
+		}, { passive: true } );
+	} );
 };
 
 OSApp.UIDom.closePanel = function( callback ) {
