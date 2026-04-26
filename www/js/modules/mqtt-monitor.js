@@ -221,16 +221,7 @@ OSApp.MqttMonitor.displayPage = function() {
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 	page.one( "pageshow", function() {
-		// Load mqtt.js on first use, then connect
-		if ( typeof mqtt === "undefined" ) {
-			$.getScript( "https://unpkg.com/mqtt/dist/mqtt.min.js" )
-				.done( connect )
-				.fail( function() {
-					setStatus( "error", "Could not load mqtt.js", "Check internet access" );
-				} );
-		} else {
-			connect();
-		}
+		connect();
 	} );
 
 	page.one( "pagehide", function() {

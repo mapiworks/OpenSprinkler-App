@@ -146,6 +146,9 @@ window.currLocal = true;
 			// Insert datatables grid library
 			insertScript( assetLocation + "vendor-js/vis-timeline-graph2d.min.js" );
 
+			// Insert MQTT WebSocket client library
+			insertScript( assetLocation + "vendor-js/mqtt.min.js" );
+
 
 			fetch( assetLocation + "modules.json" )
 				.then( response => response.json() )
