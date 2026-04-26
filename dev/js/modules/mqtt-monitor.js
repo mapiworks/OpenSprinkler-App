@@ -16,62 +16,146 @@
 var OSApp = OSApp || {};
 OSApp.MqttMonitor = OSApp.MqttMonitor || {};
 
+// ── Shared background state ───────────────────────────────────────────────────
+OSApp.MqttMonitor.messages   = [];   // circular buffer, shared with monitor page
+OSApp.MqttMonitor._client    = null;
+OSApp.MqttMonitor._state     = "off"; // off | connecting | connected | error
+OSApp.MqttMonitor._wsPort    = 9001;
+OSApp.MqttMonitor._MAX       = 300;
+
+// ── Background connection ─────────────────────────────────────────────────────
+OSApp.MqttMonitor.startBackground = function( wsPort ) {
+	if ( wsPort ) { OSApp.MqttMonitor._wsPort = wsPort; }
+
+	// Already connected — nothing to do
+	if ( OSApp.MqttMonitor._client && OSApp.MqttMonitor._state === "connected" ) { return; }
+
+	var mqttCfg = OSApp.currentSession.controller &&
+	              OSApp.currentSession.controller.settings &&
+	              OSApp.currentSession.controller.settings.mqtt;
+
+	if ( !mqttCfg || !mqttCfg.host || typeof mqtt === "undefined" ) { return; }
+
+	// Tear down any stale client
+	if ( OSApp.MqttMonitor._client ) {
+		try { OSApp.MqttMonitor._client.end( true ); } catch ( e ) {}
+		OSApp.MqttMonitor._client = null;
+	}
+
+	OSApp.MqttMonitor._state = "connecting";
+	$( document ).trigger( "mqttState", [ "connecting" ] );
+
+	var opts = {
+		clientId:        "osapp_bg_" + Math.random().toString( 16 ).substr( 2, 8 ),
+		reconnectPeriod: 8000,
+		connectTimeout:  6000
+	};
+	if ( mqttCfg.user ) { opts.username = mqttCfg.user; }
+	if ( mqttCfg.pass ) { opts.password = mqttCfg.pass; }
+
+	var wsUrl = "ws://" + mqttCfg.host + ":" + OSApp.MqttMonitor._wsPort + "/mqtt";
+	var client = mqtt.connect( wsUrl, opts );
+	OSApp.MqttMonitor._client = client;
+
+	client.on( "connect", function() {
+		client.subscribe( "#" );
+		OSApp.MqttMonitor._state = "connected";
+		$( document ).trigger( "mqttState", [ "connected" ] );
+	} );
+
+	client.on( "message", function( topic, message ) {
+		var now     = new Date(),
+			hh      = String( now.getHours() ).padStart( 2, "0" ),
+			mm      = String( now.getMinutes() ).padStart( 2, "0" ),
+			ss      = String( now.getSeconds() ).padStart( 2, "0" ),
+			ms      = String( now.getMilliseconds() ).padStart( 3, "0" ),
+			pubt    = ( ( mqttCfg.pubt || "opensprinkler" ).replace( /\/+$/, "" ) ),
+			subt    = ( ( mqttCfg.subt || "" ).replace( /\/+$/, "" ) ),
+			kind    = ( topic === pubt || topic.indexOf( pubt + "/" ) === 0 ) ? "pub" :
+			          ( subt && ( topic === subt || topic.indexOf( subt + "/" ) === 0 ) ) ? "sub" : "other",
+			payload = message.toString(),
+			msg     = { time: hh + ":" + mm + ":" + ss + "." + ms, topic: topic,
+			            payload: payload, kind: kind };
+
+		try { msg.payload = JSON.stringify( JSON.parse( payload ), null, 0 ); } catch ( e ) {}
+
+		OSApp.MqttMonitor.messages.push( msg );
+		if ( OSApp.MqttMonitor.messages.length > OSApp.MqttMonitor._MAX ) {
+			OSApp.MqttMonitor.messages.shift();
+		}
+
+		$( document ).trigger( "mqttMessage", [ msg ] );
+	} );
+
+	client.on( "error", function() {
+		OSApp.MqttMonitor._state = "error";
+		$( document ).trigger( "mqttState", [ "error" ] );
+	} );
+
+	client.on( "close", function() {
+		if ( OSApp.MqttMonitor._state !== "off" ) {
+			OSApp.MqttMonitor._state = "connecting"; // will auto-reconnect
+			$( document ).trigger( "mqttState", [ "connecting" ] );
+		}
+	} );
+};
+
+OSApp.MqttMonitor.stopBackground = function() {
+	OSApp.MqttMonitor._state = "off";
+	if ( OSApp.MqttMonitor._client ) {
+		try { OSApp.MqttMonitor._client.end( true ); } catch ( e ) {}
+		OSApp.MqttMonitor._client = null;
+	}
+	$( document ).trigger( "mqttState", [ "off" ] );
+};
+
+// ── Monitor page ──────────────────────────────────────────────────────────────
 OSApp.MqttMonitor.displayPage = function() {
-	var mqttCfg  = OSApp.currentSession.controller &&
-	               OSApp.currentSession.controller.settings &&
-	               OSApp.currentSession.controller.settings.mqtt;
+	var mqttCfg = OSApp.currentSession.controller &&
+	              OSApp.currentSession.controller.settings &&
+	              OSApp.currentSession.controller.settings.mqtt;
 
 	if ( !mqttCfg || !mqttCfg.host ) {
 		OSApp.Errors.showError( OSApp.Language._( "MQTT is not configured. Enable it in Options → MQTT first." ) );
 		return;
 	}
 
-	var MAX_MSGS  = 300,
-		messages  = [],
-		client    = null,
-		paused    = false,
-		pubt      = ( mqttCfg.pubt || "opensprinkler" ).replace( /\/+$/, "" ),
-		subt      = ( mqttCfg.subt || "" ).replace( /\/+$/, "" );
+	var paused = false;
 
-	// ── Page skeleton ──────────────────────────────────────────────────────
+	// ── Page skeleton ─────────────────────────────────────────────────────────
 	var page = $( [
 		"<div data-role='page' id='mqtt-monitor'>",
 			"<div class='ui-content' role='main'>",
 
-				// Connection bar
 				"<div class='mqtt-connbar'>",
-					"<span class='mqtt-dot mqtt-dot-connecting'></span>",
-					"<span class='mqtt-connlabel'>Connecting…</span>",
-					"<span class='mqtt-conninfo'></span>",
+					"<span class='mqtt-dot mqtt-dot-" + OSApp.MqttMonitor._state + "'></span>",
+					"<span class='mqtt-connlabel'>" + OSApp.MqttMonitor._state + "</span>",
+					"<span class='mqtt-conninfo'>" + mqttCfg.host + ":" + OSApp.MqttMonitor._wsPort + "</span>",
 					"<div class='mqtt-connbar-right'>",
-						"<span class='mqtt-count'>0 messages</span>",
+						"<span class='mqtt-count'>" + OSApp.MqttMonitor.messages.length + " messages</span>",
 						"<button class='mqtt-btn-pause ui-btn ui-btn-inline ui-mini ui-corner-all'>Pause</button>",
 						"<button class='mqtt-btn-clear  ui-btn ui-btn-inline ui-mini ui-corner-all'>Clear</button>",
 					"</div>",
 				"</div>",
 
-				// WS port row
 				"<div class='mqtt-portrow'>",
 					"<label class='mqtt-portlabel'>WebSocket port</label>",
-					"<input class='mqtt-portinput' type='number' value='9001' min='1' max='65535'>",
+					"<input class='mqtt-portinput' type='number' value='" + OSApp.MqttMonitor._wsPort + "' min='1' max='65535'>",
 					"<button class='mqtt-btn-reconnect ui-btn ui-btn-inline ui-mini ui-corner-all'>Reconnect</button>",
 				"</div>",
 
-				// Legend
 				"<div class='mqtt-legend'>",
 					"<span class='mqtt-pill mqtt-pill-pub'>PUB</span> from controller &nbsp;",
 					"<span class='mqtt-pill mqtt-pill-sub'>SUB</span> to controller &nbsp;",
 					"<span class='mqtt-pill mqtt-pill-other'>OTHER</span>",
 				"</div>",
 
-				// Message feed
 				"<div class='mqtt-feed' id='mqtt-feed'></div>",
-
 			"</div>",
 		"</div>"
 	].join( "" ) );
 
-	// ── Header ──────────────────────────────────────────────────────────────
+	// ── Header ────────────────────────────────────────────────────────────────
 	OSApp.UIDom.changeHeader( {
 		title: "MQTT Monitor",
 		leftBtn: {
@@ -82,153 +166,72 @@ OSApp.MqttMonitor.displayPage = function() {
 		}
 	} );
 
-	// ── Helper: classify topic ───────────────────────────────────────────────
-	function classify( topic ) {
-		if ( pubt && topic === pubt || topic.indexOf( pubt + "/" ) === 0 ) { return "pub"; }
-		if ( subt && topic === subt || ( subt && topic.indexOf( subt + "/" ) === 0 ) ) { return "sub"; }
-		return "other";
-	}
-
-	// ── Helper: format payload ───────────────────────────────────────────────
-	function formatPayload( raw ) {
-		try {
-			var obj = JSON.parse( raw );
-			return JSON.stringify( obj, null, 0 );   // compact but valid JSON
-		} catch ( e ) {
-			return raw;
-		}
-	}
-
-	// ── Render one message row ───────────────────────────────────────────────
+	// ── Helpers ───────────────────────────────────────────────────────────────
 	function rowHTML( msg ) {
-		var cls  = "mqtt-row mqtt-row-" + msg.kind,
-			pill = "<span class='mqtt-pill mqtt-pill-" + msg.kind + "'>" +
-			       msg.kind.toUpperCase() + "</span>";
-		return "<div class='" + cls + "'>" +
+		return "<div class='mqtt-row mqtt-row-" + msg.kind + "'>" +
 			"<span class='mqtt-ts'>" + msg.time + "</span>" +
-			pill +
+			"<span class='mqtt-pill mqtt-pill-" + msg.kind + "'>" + msg.kind.toUpperCase() + "</span>" +
 			"<span class='mqtt-topic'>" + $( "<span>" ).text( msg.topic ).html() + "</span>" +
 			"<span class='mqtt-payload'>" + $( "<span>" ).text( msg.payload ).html() + "</span>" +
 		"</div>";
 	}
 
-	// ── Add message ──────────────────────────────────────────────────────────
-	function addMessage( topic, payloadBuf ) {
+	function appendRow( msg ) {
 		if ( paused ) { return; }
-
-		var now     = new Date(),
-			hh      = String( now.getHours() ).padStart( 2, "0" ),
-			mm      = String( now.getMinutes() ).padStart( 2, "0" ),
-			ss      = String( now.getSeconds() ).padStart( 2, "0" ),
-			ms      = String( now.getMilliseconds() ).padStart( 3, "0" ),
-			payload = formatPayload( payloadBuf.toString() ),
-			msg     = { time: hh + ":" + mm + ":" + ss + "." + ms, topic: topic,
-			            payload: payload, kind: classify( topic ) };
-
-		messages.push( msg );
-		if ( messages.length > MAX_MSGS ) { messages.shift(); }
-
 		var feed     = document.getElementById( "mqtt-feed" ),
 			atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
-
 		feed.insertAdjacentHTML( "beforeend", rowHTML( msg ) );
-
-		// Trim DOM to MAX_MSGS rows
-		while ( feed.children.length > MAX_MSGS ) {
-			feed.removeChild( feed.firstChild );
-		}
-
-		// Auto-scroll if already at bottom
+		while ( feed.children.length > OSApp.MqttMonitor._MAX ) { feed.removeChild( feed.firstChild ); }
 		if ( atBottom ) { feed.scrollTop = feed.scrollHeight; }
-
-		// Update counter
-		page.find( ".mqtt-count" ).text( messages.length + " messages" );
+		page.find( ".mqtt-count" ).text( OSApp.MqttMonitor.messages.length + " messages" );
 	}
 
-	// ── Connect ──────────────────────────────────────────────────────────────
-	function connect() {
-		var wsPort  = parseInt( page.find( ".mqtt-portinput" ).val(), 10 ) || 9001,
-			wsUrl   = "ws://" + mqttCfg.host + ":" + wsPort + "/mqtt",
-			opts    = {
-				clientId:        "osapp_" + Math.random().toString( 16 ).substr( 2, 8 ),
-				reconnectPeriod: 0,    // no auto-reconnect; user controls it
-				connectTimeout:  6000
-			};
-
-		if ( mqttCfg.user )     { opts.username = mqttCfg.user; }
-		if ( mqttCfg.pass )     { opts.password = mqttCfg.pass; }
-
-		setStatus( "connecting", "Connecting to " + wsUrl + " …", "" );
-
-		if ( typeof mqtt === "undefined" ) {
-			OSApp.Errors.showError( "mqtt.js failed to load" );
-			setStatus( "error", "Library error", "" );
-			return;
-		}
-
-		if ( client ) { try { client.end( true ); } catch ( e ) {} }
-
-		client = mqtt.connect( wsUrl, opts );
-
-		client.on( "connect", function() {
-			client.subscribe( "#" );   // all topics
-			setStatus( "connected", "Connected", mqttCfg.host + ":" + wsPort );
-		} );
-
-		client.on( "message", function( topic, message ) {
-			addMessage( topic, message );
-		} );
-
-		client.on( "error", function( err ) {
-			setStatus( "error", "Error: " + ( err.message || err ), "" );
-		} );
-
-		client.on( "close", function() {
-			setStatus( "offline", "Disconnected", "" );
-		} );
-
-		client.on( "offline", function() {
-			setStatus( "offline", "Offline", "" );
-		} );
-	}
-
-	// ── Status indicator ─────────────────────────────────────────────────────
-	function setStatus( state, label, info ) {
+	function setStatus( state ) {
 		var dot = page.find( ".mqtt-dot" );
-		dot.removeClass( "mqtt-dot-connecting mqtt-dot-connected mqtt-dot-offline mqtt-dot-error" )
+		dot.removeClass( "mqtt-dot-connecting mqtt-dot-connected mqtt-dot-off mqtt-dot-error" )
 		   .addClass( "mqtt-dot-" + state );
-		page.find( ".mqtt-connlabel" ).text( label );
-		page.find( ".mqtt-conninfo" ).text( info );
+		page.find( ".mqtt-connlabel" ).text( state );
 	}
 
-	// ── Wire up controls ─────────────────────────────────────────────────────
+	// ── Wire controls ─────────────────────────────────────────────────────────
 	page.find( ".mqtt-btn-pause" ).on( "click", function() {
 		paused = !paused;
 		$( this ).text( paused ? "Resume" : "Pause" );
 	} );
 
 	page.find( ".mqtt-btn-clear" ).on( "click", function() {
-		messages = [];
+		OSApp.MqttMonitor.messages = [];
 		document.getElementById( "mqtt-feed" ).innerHTML = "";
 		page.find( ".mqtt-count" ).text( "0 messages" );
 	} );
 
 	page.find( ".mqtt-btn-reconnect" ).on( "click", function() {
-		page.find( "#mqtt-feed" ).html( "" );
-		messages = [];
-		connect();
+		OSApp.MqttMonitor._wsPort = parseInt( page.find( ".mqtt-portinput" ).val(), 10 ) || 9001;
+		OSApp.MqttMonitor.stopBackground();
+		OSApp.MqttMonitor.messages = [];
+		document.getElementById( "mqtt-feed" ).innerHTML = "";
+		OSApp.MqttMonitor.startBackground();
 	} );
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 	page.one( "pageshow", function() {
-		connect();
+		// Render buffered messages immediately
+		var feed = document.getElementById( "mqtt-feed" );
+		OSApp.MqttMonitor.messages.forEach( function( msg ) {
+			feed.insertAdjacentHTML( "beforeend", rowHTML( msg ) );
+		} );
+		feed.scrollTop = feed.scrollHeight;
+
+		// Ensure background connection is running
+		OSApp.MqttMonitor.startBackground();
+
+		// Live updates
+		$( document ).on( "mqttMessage.monitor", function( e, msg ) { appendRow( msg ); } );
+		$( document ).on( "mqttState.monitor",   function( e, s )   { setStatus( s ); } );
 	} );
 
 	page.one( "pagehide", function() {
-		if ( client ) {
-			try { client.end( true ); } catch ( e ) {}
-			client = null;
-		}
+		$( document ).off( "mqttMessage.monitor mqttState.monitor" );
 		page.remove();
 	} );
 
