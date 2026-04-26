@@ -821,7 +821,51 @@ a.ui-btn-active {
 }
 
 /* ============================================================
-   MQTT MONITOR
+   MQTT BADGE (dashboard pill)
+   ============================================================ */
+
+.mqtt-badge {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.mqtt-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #8E8E93;
+  transition: background 0.3s;
+}
+
+/* State colours on the dot */
+.mqtt-badge-connected  .mqtt-badge-dot { background: #27AE60; }
+.mqtt-badge-connecting .mqtt-badge-dot { background: #F5A623; animation: mqtt-badge-blink 1s infinite; }
+.mqtt-badge-error      .mqtt-badge-dot { background: #FF3B30; }
+.mqtt-badge-off        .mqtt-badge-dot { background: #8E8E93; }
+
+@keyframes mqtt-badge-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* Pulse on incoming message */
+.mqtt-badge-pulse {
+  animation: mqtt-badge-pulse 0.5s ease-out;
+}
+
+@keyframes mqtt-badge-pulse {
+  0%   { transform: scale(1);    background: var(--os-primary-light); }
+  30%  { transform: scale(1.12); background: #D5F5E3; }
+  100% { transform: scale(1);    background: var(--os-primary-light); }
+}
+
+/* ============================================================
+   MQTT MONITOR (full page)
    ============================================================ */
 
 /* Connection bar */

@@ -234,8 +234,26 @@ OSApp.Dashboard.displayPage = function() {
 			}
 		}
 
+		// MQTT activity badge — always shown when MQTT is configured
+		var mqttCfg = OSApp.currentSession.controller &&
+		              OSApp.currentSession.controller.settings &&
+		              OSApp.currentSession.controller.settings.mqtt;
+		if ( mqttCfg && mqttCfg.host ) {
+			var state = OSApp.MqttMonitor._state || "off";
+			html += "<span class='sensor-tag mqtt-badge mqtt-badge-" + state + "' id='mqtt-badge'>" +
+				"<span class='mqtt-badge-dot'></span>" +
+				"<span class='mqtt-badge-label'>MQTT</span>" +
+			"</span>";
+			hasContent = true;
+		}
+
 		if ( hasContent ) {
 			showArea.html( html ).show();
+
+			// Bind MQTT badge tap → open monitor page
+			showArea.find( "#mqtt-badge" ).on( "click", function() {
+				OSApp.UIDom.changePage( "#mqtt-monitor" );
+			} );
 		} else {
 			showArea.empty().hide();
 		}
@@ -1379,6 +1397,28 @@ OSApp.Dashboard.displayPage = function() {
 	// Use .on (not .one) so refresh restarts if user navigates away and back.
 	page.on( "pageshow", function() {
 		startSensorRefresh();
+
+		// Start background MQTT connection and wire badge
+		var mqttCfg = OSApp.currentSession.controller &&
+		              OSApp.currentSession.controller.settings &&
+		              OSApp.currentSession.controller.settings.mqtt;
+		if ( mqttCfg && mqttCfg.host && typeof OSApp.MqttMonitor !== "undefined" ) {
+			OSApp.MqttMonitor.startBackground();
+
+			// Pulse badge on every incoming message
+			$( document ).on( "mqttMessage.dashboard", function() {
+				var badge = page.find( "#mqtt-badge" );
+				badge.addClass( "mqtt-badge-pulse" );
+				setTimeout( function() { badge.removeClass( "mqtt-badge-pulse" ); }, 500 );
+			} );
+
+			// Update badge dot color when connection state changes
+			$( document ).on( "mqttState.dashboard", function( e, state ) {
+				var badge = page.find( "#mqtt-badge" );
+				badge.removeClass( "mqtt-badge-off mqtt-badge-connecting mqtt-badge-connected mqtt-badge-error" )
+				     .addClass( "mqtt-badge-" + state );
+			} );
+		}
 	} );
 
 	page.on( "pagehide", function() {
@@ -1386,6 +1426,7 @@ OSApp.Dashboard.displayPage = function() {
 			clearInterval( sensorRefreshTimer );
 			sensorRefreshTimer = null;
 		}
+		$( document ).off( "mqttMessage.dashboard mqttState.dashboard" );
 	} );
 
 	function begin( firstLoad ) {
