@@ -789,49 +789,67 @@ OSApp.UIDom.openPopup = function( popup, args ) {
 
 	popup.popup( "open" );
 
-	// Swipe-down-to-close: attach after open so the element is in the DOM
+	// Swipe-left-to-close: horizontal swipe doesn't conflict with vertical scrolling
 	popup.one( "popupafteropen", function() {
-		var el       = popup[ 0 ],
-			startY   = 0,
-			startX   = 0,
-			dragging = false,
-			THRESHOLD = 72;   // px downward travel needed to dismiss
+		var el        = popup[ 0 ],
+			startX    = 0,
+			startY    = 0,
+			dragging  = false,
+			THRESHOLD = 80;   // px leftward travel needed to dismiss
 
-		el.addEventListener( "touchstart", function( e ) {
-			// Only begin drag from the top 56 px (handle zone) so scroll inside
-			// the popup still works normally
-			var touch = e.touches[ 0 ];
-			if ( touch.clientY - el.getBoundingClientRect().top > 56 ) { return; }
-			startY   = touch.clientY;
-			startX   = touch.clientX;
-			dragging = true;
+		function onStart( e ) {
+			var t = e.touches[ 0 ];
+			startX   = t.clientX;
+			startY   = t.clientY;
+			dragging = false;
 			el.style.transition = "none";
-		}, { passive: true } );
+		}
 
-		el.addEventListener( "touchmove", function( e ) {
-			if ( !dragging ) { return; }
-			var dy = e.touches[ 0 ].clientY - startY;
-			if ( dy > 0 ) {
-				el.style.transform = "translateY(" + dy + "px)";
-				el.style.opacity   = Math.max( 0.4, 1 - dy / 220 );
+		function onMove( e ) {
+			var t  = e.touches[ 0 ],
+				dx = t.clientX - startX,
+				dy = Math.abs( t.clientY - startY );
+
+			// Only hijack when gesture is more horizontal than vertical
+			if ( !dragging ) {
+				if ( Math.abs( dx ) < 8 && dy < 8 ) { return; }      // hasn't moved enough yet
+				if ( dy > Math.abs( dx ) ) { return; }                 // mostly vertical → let scroll handle it
+				if ( dx > 0 ) { return; }                              // swiping right → ignore
+				dragging = true;
 			}
-		}, { passive: true } );
 
-		el.addEventListener( "touchend", function( e ) {
+			e.preventDefault();
+			var clamped = Math.min( dx, 0 );   // only allow leftward movement
+			el.style.transform = "translateX(" + clamped + "px)";
+			el.style.opacity   = Math.max( 0.3, 1 + clamped / 200 );
+		}
+
+		function onEnd( e ) {
 			if ( !dragging ) { return; }
 			dragging = false;
-			var dy = e.changedTouches[ 0 ].clientY - startY;
-			if ( dy > THRESHOLD ) {
+			var dx = e.changedTouches[ 0 ].clientX - startX;
+			if ( dx < -THRESHOLD ) {
 				el.style.transition = "transform 0.18s ease, opacity 0.18s ease";
-				el.style.transform  = "translateY(120%)";
+				el.style.transform  = "translateX(-110%)";
 				el.style.opacity    = "0";
 				setTimeout( function() { popup.popup( "close" ); }, 160 );
 			} else {
 				el.style.transition = "transform 0.22s ease, opacity 0.22s ease";
 				el.style.transform  = "";
 				el.style.opacity    = "";
+				setTimeout( function() { el.style.transition = ""; }, 230 );
 			}
-		}, { passive: true } );
+		}
+
+		el.addEventListener( "touchstart", onStart, { passive: true } );
+		el.addEventListener( "touchmove",  onMove,  { passive: false } );
+		el.addEventListener( "touchend",   onEnd,   { passive: true } );
+
+		popup.one( "popupafterclose", function() {
+			el.removeEventListener( "touchstart", onStart );
+			el.removeEventListener( "touchmove",  onMove );
+			el.removeEventListener( "touchend",   onEnd );
+		} );
 	} );
 };
 

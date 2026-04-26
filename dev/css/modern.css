@@ -480,8 +480,6 @@ a.ui-btn-active {
   border-radius: var(--os-radius-lg) !important;
   overflow: hidden;
   box-shadow: var(--os-shadow-lg) !important;
-  /* allow vertical drag tracking */
-  touch-action: pan-x;
 }
 
 /* Drag handle pill at the top of every popup */
