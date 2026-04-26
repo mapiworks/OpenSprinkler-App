@@ -342,23 +342,14 @@ OSApp.UIDom.showHomeMenu = ( function() {
 			tile( "#export-config", MENU_ICONS.exportcfg,  OSApp.Language._( "Export Config" ) ) +
 			tile( "#import-config", MENU_ICONS.importcfg,  OSApp.Language._( "Import Config" ) ) +
 			tile( "#about",        MENU_ICONS.about,       OSApp.Language._( "About" ) ) +
-			tile( "#check-update", MENU_ICONS.update,      OSApp.Language._( "Check Updates" ) );
-
-		var actions = "<div class='menu-action-bar'>" +
+			tile( "#check-update", MENU_ICONS.update,      OSApp.Language._( "Check Updates" ) ) +
 			( onDashboard ?
-				"<a href='#show-hidden' class='menu-action-btn menu-action-secondary'>" +
-					"<span class='menu-tile-icon'>" + ( showHidden ? MENU_ICONS.eyeshow : MENU_ICONS.eyehide ) + "</span>" +
-					( showHidden ? OSApp.Language._( "Hide" ) : OSApp.Language._( "Show" ) ) + " " + OSApp.Language._( "Disabled" ) +
-				"</a>" : "" ) +
-			"<a href='#stop-all' class='menu-action-btn menu-action-danger'>" +
-				"<span class='menu-tile-icon'>" + MENU_ICONS.stop + "</span>" +
-				OSApp.Language._( "Stop All Stations" ) +
-			"</a>" +
-		"</div>";
+				tile( "#show-hidden", showHidden ? MENU_ICONS.eyeshow : MENU_ICONS.eyehide,
+					( showHidden ? OSApp.Language._( "Hide" ) : OSApp.Language._( "Show" ) ) + " " + OSApp.Language._( "Disabled" ) ) : "" ) +
+			tile( "#stop-all", MENU_ICONS.stop, OSApp.Language._( "Stop All" ), "menu-tile-danger" );
 
 		popup = $( "<div data-role='popup' data-theme='a' id='mainMenu'>" +
 			"<div class='menu-tile-grid'>" + tiles + "</div>" +
-			actions +
 		"</div>" );
 	}
 
