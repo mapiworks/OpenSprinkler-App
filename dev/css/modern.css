@@ -480,6 +480,8 @@ a.ui-btn-active {
   border-radius: var(--os-radius-lg) !important;
   overflow: hidden;
   box-shadow: var(--os-shadow-lg) !important;
+  /* pan-y = browser handles vertical scroll natively, JS gets horizontal swipes */
+  touch-action: pan-y;
 }
 
 
