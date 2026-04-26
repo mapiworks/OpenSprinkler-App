@@ -23,6 +23,11 @@ OSApp.MqttMonitor._state     = "off"; // off | connecting | connected | error
 OSApp.MqttMonitor._wsPort    = 9001;
 OSApp.MqttMonitor._MAX       = 300;
 
+// Restore persisted WebSocket port preference
+OSApp.Storage.get( "mqttWsPort", function( data ) {
+	if ( data.mqttWsPort ) { OSApp.MqttMonitor._wsPort = parseInt( data.mqttWsPort, 10 ); }
+} );
+
 // ── Background connection ─────────────────────────────────────────────────────
 OSApp.MqttMonitor.startBackground = function( wsPort ) {
 	if ( wsPort ) { OSApp.MqttMonitor._wsPort = wsPort; }
@@ -130,7 +135,7 @@ OSApp.MqttMonitor.displayPage = function() {
 				"<div class='mqtt-connbar'>",
 					"<span class='mqtt-dot mqtt-dot-" + OSApp.MqttMonitor._state + "'></span>",
 					"<span class='mqtt-connlabel'>" + OSApp.MqttMonitor._state + "</span>",
-					"<span class='mqtt-conninfo'>" + mqttCfg.host + ":" + OSApp.MqttMonitor._wsPort + "</span>",
+					"<span class='mqtt-conninfo'>" + mqttCfg.host + " (ws:" + OSApp.MqttMonitor._wsPort + ")</span>",
 					"<div class='mqtt-connbar-right'>",
 						"<span class='mqtt-count'>" + OSApp.MqttMonitor.messages.length + " messages</span>",
 						"<button class='mqtt-btn-pause ui-btn ui-btn-inline ui-mini ui-corner-all'>Pause</button>",
@@ -138,7 +143,8 @@ OSApp.MqttMonitor.displayPage = function() {
 					"</div>",
 				"</div>",
 
-				"<div class='mqtt-portrow'>",
+				// WS port row — hidden by default, shown only on connection error
+				"<div class='mqtt-portrow' style='display:none'>",
 					"<label class='mqtt-portlabel'>WebSocket port</label>",
 					"<input class='mqtt-portinput' type='number' value='" + OSApp.MqttMonitor._wsPort + "' min='1' max='65535'>",
 					"<button class='mqtt-btn-reconnect ui-btn ui-btn-inline ui-mini ui-corner-all'>Reconnect</button>",
@@ -191,6 +197,13 @@ OSApp.MqttMonitor.displayPage = function() {
 		dot.removeClass( "mqtt-dot-connecting mqtt-dot-connected mqtt-dot-off mqtt-dot-error" )
 		   .addClass( "mqtt-dot-" + state );
 		page.find( ".mqtt-connlabel" ).text( state );
+		// Show WS port row only when connection fails so user can adjust it
+		page.find( ".mqtt-portrow" ).toggle( state === "error" );
+		if ( state === "error" ) {
+			page.find( ".mqtt-conninfo" ).text( "Can't connect — check WebSocket port below" );
+		} else {
+			page.find( ".mqtt-conninfo" ).text( mqttCfg.host + " (ws:" + OSApp.MqttMonitor._wsPort + ")" );
+		}
 	}
 
 	// ── Wire controls ─────────────────────────────────────────────────────────
@@ -206,7 +219,9 @@ OSApp.MqttMonitor.displayPage = function() {
 	} );
 
 	page.find( ".mqtt-btn-reconnect" ).on( "click", function() {
-		OSApp.MqttMonitor._wsPort = parseInt( page.find( ".mqtt-portinput" ).val(), 10 ) || 9001;
+		var p = parseInt( page.find( ".mqtt-portinput" ).val(), 10 ) || 9001;
+		OSApp.MqttMonitor._wsPort = p;
+		OSApp.Storage.set( { mqttWsPort: p } );
 		OSApp.MqttMonitor.stopBackground();
 		OSApp.MqttMonitor.messages = [];
 		document.getElementById( "mqtt-feed" ).innerHTML = "";
