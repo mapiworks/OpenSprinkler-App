@@ -1612,7 +1612,7 @@ OSApp.Dashboard.updateWaterLevel = function() {
 	if ( !OSApp.currentSession.controller.options ) {
 		return;
 	}
-	$( "#water-level" ).html(OSApp.Language._( "Water Level" ) + ": <span class='waterlevel'>" + OSApp.currentSession.controller.options.wl + "</span>%");
+	$( "#water-level" ).html( "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='width:13px;height:13px;vertical-align:middle;margin-right:3px'><path d='M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z'/></svg><span class='waterlevel'>" + OSApp.currentSession.controller.options.wl + "</span>%" );
 };
 
 OSApp.Dashboard.updateRestrictNotice = function() {
