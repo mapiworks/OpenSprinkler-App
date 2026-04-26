@@ -482,17 +482,6 @@ a.ui-btn-active {
   box-shadow: var(--os-shadow-lg) !important;
 }
 
-/* Drag handle pill at the top of every popup */
-.ui-popup::before {
-  content: '';
-  display: block;
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(0,0,0,0.18);
-  margin: 10px auto 4px;
-  flex-shrink: 0;
-}
 
 .ui-popup .ui-header {
   border-radius: var(--os-radius-lg) var(--os-radius-lg) 0 0 !important;
