@@ -33,7 +33,28 @@ OSApp.UIDom.launchApp = function() {
 
 	if ( "serviceWorker" in navigator ) {
 		window.addEventListener( "load", function() {
-			navigator.serviceWorker.register( "/sw.js" );
+			var homeScript = document.querySelector( "script[src$='home.js']" );
+
+			// The UI is normally served from an external source while this page
+			// comes from the controller. A service worker must be same-origin, so
+			// only register one when the page itself is served with the UI assets.
+			if ( !homeScript ) {
+				return;
+			}
+
+			var uiSource = new URL( homeScript.src );
+			if ( uiSource.origin !== window.location.origin ) {
+				return;
+			}
+
+			var workerUrl = new URL( "../sw.js", uiSource );
+			var scopeUrl = new URL( "../", uiSource );
+
+			navigator.serviceWorker.register( workerUrl.href, {
+				scope: scopeUrl.pathname
+			} ).catch( function( err ) {
+				console.warn( "Service worker registration failed:", err );
+			} );
 		} );
 	}
 
