@@ -334,7 +334,8 @@ OSApp.Dashboard.displayPage = function() {
 
 			// ── Card wrapper ───────────────────────────────────────────────────────
 			cards += "<div data-station='" + sid + "' class='ui-corner-all card " + tileState +
-				( OSApp.Stations.isDisabled( sid ) ? " station-hidden' style='display:none" : "" ) + "'>";
+				( OSApp.Stations.isDisabled( sid ) ? " station-hidden" : "" ) + "'" +
+				( OSApp.Stations.isDisabled( sid ) && !page.hasClass( "show-hidden" ) ? " style='display:none'" : "" ) + ">";
 
 			// ── Tile body ──────────────────────────────────────────────────────────
 			cards += "<div class='ui-body ui-body-a tile-inner'>";
@@ -1226,9 +1227,7 @@ OSApp.Dashboard.displayPage = function() {
 					cardHolder.append( cards );
 				} else {
 					if ( OSApp.Stations.isDisabled( sid ) ) {
-						if ( !page.hasClass( "show-hidden" ) ) {
-							card.hide();
-						}
+						card.toggle( page.hasClass( "show-hidden" ) );
 						card.addClass( "station-hidden" );
 					} else {
 						card.show().removeClass( "station-hidden" );

@@ -205,11 +205,32 @@ button.ui-btn-active {
 #os-stations-list,
 #os-running-stations {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
+  grid-template-columns: 1fr !important;
   gap: 10px !important;
   max-width: 640px;
   margin: 0 auto !important;
   padding: 0 !important;
+}
+
+.program-editor-help {
+  line-height: 1.35;
+  margin: 0 0 0.75em;
+}
+
+.runonce-duration-help {
+  line-height: 1.35;
+  margin: 0 0 0.75em;
+}
+
+.program-station-disabled label,
+.runonce-station-disabled label {
+  opacity: 0.75;
+}
+
+.program-station-state,
+.runonce-station-state {
+  font-size: 0.85em;
+  font-weight: 600;
 }
 
 /* ============================================================

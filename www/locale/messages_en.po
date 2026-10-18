@@ -1511,6 +1511,15 @@ msgstr ""
 msgid "Last Used Program"
 msgstr ""
 
+msgid "Run-once duration help"
+msgstr ""
+
+msgid "Run-once preset label"
+msgstr ""
+
+msgid "Enter durations manually"
+msgstr ""
+
 msgid "Zero value excludes the station from the run-once program."
 msgstr ""
 
@@ -1649,6 +1658,24 @@ msgid "Day of the Month (Use 0 for the last day)"
 msgstr ""
 
 msgid "Stations"
+msgstr ""
+
+msgid "Total Program Run Time"
+msgstr ""
+
+msgid "Station duration help"
+msgstr ""
+
+msgid "Set All Station Durations"
+msgstr ""
+
+msgid "Set Duration"
+msgstr ""
+
+msgid "Additional Start Times for this Program"
+msgstr ""
+
+msgid "Additional start times help"
 msgstr ""
 
 msgid "Additional Start Times"

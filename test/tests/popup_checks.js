@@ -32,7 +32,7 @@ describe("Popup Checks", function () {
 			$( "#durationBox" ).popup( "close" ).remove();
 		} );
 		assert.doesNotThrow( function() {
-			$( "#mainMenu" ).find( "a[href='#raindelay']" ).trigger( "click" );
+			$( "#mainMenu" ).find( "a[data-target='#raindelay']" ).trigger( "click" );
 		} );
 	} );
 

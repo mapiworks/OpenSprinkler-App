@@ -979,18 +979,14 @@ OSApp.Sites.newLoad = function() {
 			$.mobile.loading( "hide" );
 
 			var fail = function() {
-				if ( !OSApp.currentSession.local ) {
-					if ( $( ".ui-page-active" ).attr( "id" ) === "site-control" ) {
-						showFail();
-					} else {
-						$.mobile.document.one( "pageshow", showFail );
-						OSApp.UIDom.changePage( "#site-control", {
-							transition: "none"
-						} );
-					}
+				// Keep the locally stored site/password. Clearing it and reloading
+				// can recreate the same connection attempt and trap the UI on Loading.
+				if ( $( ".ui-page-active" ).attr( "id" ) === "site-control" ) {
+					showFail();
 				} else {
-					OSApp.Storage.remove( [ "sites" ], function() {
-						window.location.reload();
+					$.mobile.document.one( "pageshow", showFail );
+					OSApp.UIDom.changePage( "#site-control", {
+						transition: "none"
 					} );
 				}
 			},
