@@ -244,7 +244,17 @@ OSApp.UIDom.launchApp = function() {
 		}
 
 		OSApp.Storage.get( "showDisabled", function( data ) {
-			if ( data.showDisabled && data.showDisabled === "true" ) {
+			// Keep disabled stations visible on first use so the dashboard always
+			// shows the complete station list. An explicit saved "false" still
+			// lets the user hide them from the menu.
+			var showDisabled = data.showDisabled === null || data.showDisabled === undefined ||
+				data.showDisabled === "true";
+
+			if ( data.showDisabled === null || data.showDisabled === undefined ) {
+				OSApp.Storage.set( { showDisabled: true } );
+			}
+
+			if ( showDisabled ) {
 				$( newpage ).addClass( "show-hidden" ).find( ".station-hidden" ).show();
 			} else {
 				$( newpage ).removeClass( "show-hidden" ).find( ".station-hidden" ).hide();
@@ -334,8 +344,11 @@ OSApp.UIDom.showHomeMenu = ( function() {
 		mqtt:      "<svg viewBox='0 0 20 20' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 10 Q6 4 10 10 Q14 16 17 10'/><circle cx='3' cy='10' r='1.5' fill='currentColor' stroke='none'/><circle cx='17' cy='10' r='1.5' fill='currentColor' stroke='none'/><path d='M6.5 10 Q8.5 6.5 10 10 Q11.5 13.5 13.5 10'/></svg>"
 	};
 
-	function tile( href, icon, label, extraClass ) {
-		return "<a href='" + href + "' class='menu-tile" + ( extraClass ? " " + extraClass : "" ) + "'>" +
+	function tile( target, icon, label, extraClass ) {
+		// Do not put the destination in href: on mobile Safari an unhandled hash
+		// link can escape jQuery Mobile's single-page navigation and reload the
+		// controller shell. The delegated handler below owns all navigation.
+		return "<a href='#' data-target='" + target + "' class='menu-tile" + ( extraClass ? " " + extraClass : "" ) + "'>" +
 			"<span class='menu-tile-icon'>" + icon + "</span>" +
 			"<span class='menu-tile-label'>" + label + "</span>" +
 		"</a>";
@@ -385,9 +398,16 @@ OSApp.UIDom.showHomeMenu = ( function() {
 
 		makeMenu();
 
-		popup.on( "click", "a", function() {
+		popup.on( "click", "a", function( event ) {
+			event.preventDefault();
+			event.stopPropagation();
+
 			var clicked = $( this ),
-				href = clicked.attr( "href" );
+				href = clicked.attr( "data-target" );
+
+			if ( !href ) {
+				return false;
+			}
 
 			popup.popup( "close" );
 
@@ -456,12 +476,11 @@ OSApp.UIDom.initAppData = function() {
 	//Update the language on the page using the browser's locale
 	OSApp.Language.updateLang();
 
-	//Set AJAX timeout
-	if ( !OSApp.currentSession.local ) {
-		$.ajaxSetup( {
-			timeout: 10000
-		} );
-	}
+	// Bound controller requests in local mode too; otherwise one unanswered
+	// request can leave the startup loader visible indefinitely.
+	$.ajaxSetup( {
+		timeout: 10000
+	} );
 
 	// Prevent caching of AJAX requests on Android and Windows Phone devices
 	if ( OSApp.currentDevice.isAndroid ) {

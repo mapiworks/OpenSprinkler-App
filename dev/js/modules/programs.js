@@ -353,7 +353,7 @@ OSApp.Programs.displayPageRunOnce = function() {
 	} );
 
 	function begin() {
-		list = "<p class='center'>" + OSApp.Language._( "Zero value excludes the station from the run-once program." ) + "</p>";
+		list = "<p class='runonce-duration-help center smaller'>" + OSApp.Language._( "Run-once duration help" ) + "</p>";
 		progs = [];
 		repeats = [];
 		intervals = [];
@@ -383,8 +383,9 @@ OSApp.Programs.displayPageRunOnce = function() {
 		}
 		rprogs = progs;
 
-		quickPick = "<select data-mini='true' name='rprog' id='rprog'>" +
-			"<option value='t'>" + OSApp.Language._( "Test All Stations" ) + "</option><option value='s' selected='selected'>" + OSApp.Language._( "Quick Programs" ) + "</option>";
+		quickPick = "<label class='runonce-preset-label' for='rprog'>" + OSApp.Language._( "Run-once preset label" ) + "</label>" +
+			"<select data-mini='true' name='rprog' id='rprog'>" +
+			"<option value='t'>" + OSApp.Language._( "Test All Stations" ) + "</option><option value='s' selected='selected'>" + OSApp.Language._( "Enter durations manually" ) + "</option>";
 
 		for ( i = 0; i < progs.length; i++ ) {
 			if ( OSApp.Firmware.checkOSVersion( 210 ) ) {
@@ -397,13 +398,17 @@ OSApp.Programs.displayPageRunOnce = function() {
 		quickPick += "</select>";
 		list += quickPick + "<form>";
 		$.each( OSApp.currentSession.controller.stations.snames, function( i ) {
+			var stationDisabled = OSApp.Stations.isDisabled( i ),
+				stationState = stationDisabled ? " <span class='runonce-station-state'>(" + OSApp.Language._( "Disabled" ) + ")</span>" : "",
+				stationClass = stationDisabled ? " runonce-station-disabled" : "";
+
 			if ( OSApp.Stations.isMaster( i ) ) {
-				list += "<div class='ui-field-contain duration-input" + ( OSApp.Stations.isDisabled( i ) ? " station-hidden' style='display:none" : "" ) + "'>" +
-					"<label for='zone-" + i + "'>" + OSApp.Stations.getName(i) + ":</label>" +
-					"<button disabled='true' data-mini='true' name='zone-" + i + "' id='zone-" + i + "' value='0'>Master</button></div>";
+				list += "<div class='ui-field-contain duration-input" + stationClass + "'>" +
+					"<label for='zone-" + i + "'>" + OSApp.Stations.getName(i) + stationState + ":</label>" +
+					"<button disabled='true' data-mini='true' name='zone-" + i + "' id='zone-" + i + "' value='0'>" + OSApp.Language._( "Master" ) + "</button></div>";
 			} else {
-				list += "<div class='ui-field-contain duration-input" + ( OSApp.Stations.isDisabled( i ) ? " station-hidden' style='display:none" : "" ) + "'>" +
-					"<label for='zone-" + i + "'>" + OSApp.Stations.getName(i) + ":</label>" +
+				list += "<div class='ui-field-contain duration-input" + stationClass + "'>" +
+					"<label for='zone-" + i + "'>" + OSApp.Stations.getName(i) + stationState + ":</label>" +
 					"<button data-mini='true' name='zone-" + i + "' id='zone-" + i + "' value='0'>0s</button></div>";
 			}
 		} );
@@ -414,8 +419,6 @@ OSApp.Programs.displayPageRunOnce = function() {
 			// Program weather control flag
 			list += "<label for='uwt-runonce'><input data-mini='true' type='checkbox' name='uwt-runonce' id='uwt-runonce'>" + OSApp.Language._( "Use Weather Adjustment" ) + "</label>";
 
-			// Show repeating start time options
-			list += "<div id='input_stype_repeat-runonce'>";
 			// Show repeating start time options
 			list += "<div id='input_stype_repeat-runonce'>";
 			list += "<div class='ui-grid-a'>";
@@ -445,7 +448,7 @@ OSApp.Programs.displayPageRunOnce = function() {
 			}
 		}
 
-		list += "<a class='ui-btn ui-corner-all ui-shadow rsubmit' href='#'>" + OSApp.Language._( "Submit" ) + "</a>" +
+		list += "<a class='ui-btn ui-corner-all ui-shadow rsubmit' href='#'>" + OSApp.Language._( "Run" ) + "</a>" +
 			"<a class='ui-btn ui-btn-b ui-corner-all ui-shadow rreset' href='#'>" + OSApp.Language._( "Reset" ) + "</a>";
 
 		page.find( ".ui-content" ).html( list ).enhanceWithin();
@@ -506,7 +509,7 @@ OSApp.Programs.displayPageRunOnce = function() {
 				OSApp.UIDom.showDurationBox( {
 					incrementalUpdate: false,
 					seconds: 60,
-					title: "Set Duration",
+					title: OSApp.Language._( "Set Duration" ),
 					callback: function( result ) {
 						fillRunonce( Array.apply( null, Array( OSApp.currentSession.controller.stations.snames.length ) ).map( function() {return result;} ) );
 					},
@@ -593,7 +596,7 @@ OSApp.Programs.displayPageRunOnce = function() {
 			},
 			rightBtn: {
 				icon: "check",
-				text: OSApp.Language._( "Submit" ),
+				text: OSApp.Language._( "Run" ),
 				on: OSApp.Stations.submitRunonce
 			}
 		} );
@@ -2216,23 +2219,25 @@ OSApp.Programs.makeProgram21 = function( n, isCopy ) {
 	list += "<div style='margin-top:10px' class='ui-corner-all'>";
 	list += "<div class='ui-bar ui-bar-a'><h3 id='station-head'>" + OSApp.Language._( "Stations" ) + "</h3></div>";
 	list += "<div class='ui-body ui-body-a'>";
+	list += "<p class='program-editor-help program-station-help center smaller'>" + OSApp.Language._( "Station duration help" ) + "</p>";
 	list += "<div class='ui-field-contain duration-input'>" +
 			"<label for='set-all'> </label>" +
-			"<button style='background-color:#fcfcfc' data-mini='true' id='set-all'>Quick Set</button></div>";
-
-	var hideDisabled = $( "#programs" ).hasClass( "show-hidden" ) ? "" : "' style='display:none";
+			"<button style='background-color:#fcfcfc' data-mini='true' id='set-all'>" + OSApp.Language._( "Set All Station Durations" ) + "</button></div>";
 
 	// Show station duration inputs
 	for ( j = 0; j < OSApp.currentSession.controller.stations.snames.length; j++ ) {
+		var stationDisabled = OSApp.Stations.isDisabled( j ),
+			stationState = stationDisabled ? " <span class='program-station-state'>(" + OSApp.Language._( "Disabled" ) + ")</span>" : "";
+
 		if ( OSApp.Stations.isMaster( j ) ) {
-			list += "<div class='ui-field-contain duration-input" + ( OSApp.Stations.isDisabled( j ) ? " station-hidden" + hideDisabled : "" ) + "'>" +
-				"<label for='station_" + j + "-" + id + "'>" + OSApp.Stations.getName(j) + ":</label>" +
+			list += "<div class='ui-field-contain duration-input" + ( stationDisabled ? " program-station-disabled" : "" ) + "'>" +
+				"<label for='station_" + j + "-" + id + "'>" + OSApp.Stations.getName(j) + stationState + ":</label>" +
 				"<button disabled='true' data-mini='true' name='station_" + j + "-" + id + "' id='station_" + j + "-" + id + "' value='0'>" +
 				OSApp.Language._( "Master" ) + "</button></div>";
 		} else {
 			time = program.stations[ j ] || 0;
-			list += "<div class='ui-field-contain duration-input" + ( OSApp.Stations.isDisabled( j ) ? " station-hidden" + hideDisabled : "" ) + "'>" +
-				"<label for='station_" + j + "-" + id + "'>" + OSApp.Stations.getName(j) + ":</label>" +
+			list += "<div class='ui-field-contain duration-input" + ( stationDisabled ? " program-station-disabled" : "" ) + "'>" +
+				"<label for='station_" + j + "-" + id + "'>" + OSApp.Stations.getName(j) + stationState + ":</label>" +
 				"<button " + ( time > 0 ? "class='green' " : "" ) + "data-mini='true' name='station_" + j + "-" + id + "' " +
 					"id='station_" + j + "-" + id + "' value='" + time + "'>" + OSApp.Dates.getDurationText( time ) + "</button></div>";
 		}
@@ -2243,8 +2248,9 @@ OSApp.Programs.makeProgram21 = function( n, isCopy ) {
 
 	// Group all start time options visually
 	list += "<div style='margin-top:10px' class='ui-corner-all'>";
-	list += "<div class='ui-bar ui-bar-a'><h3>" + OSApp.Language._( "Additional Start Times" ) + "</h3></div>";
+	list += "<div class='ui-bar ui-bar-a'><h3>" + OSApp.Language._( "Additional Start Times for this Program" ) + "</h3></div>";
 	list += "<div class='ui-body ui-body-a'>";
+	list += "<p class='program-editor-help program-start-times-help center smaller'>" + OSApp.Language._( "Additional start times help" ) + "</p>";
 
 	// Controlgroup to handle start time type (repeating or set times)
 	list += "<fieldset data-role='controlgroup' data-type='horizontal' class='center'>";
@@ -2296,9 +2302,9 @@ OSApp.Programs.makeProgram21 = function( n, isCopy ) {
 	function updateProgramTime(){
 		var runtimes = [];
 		page.find( "[id^=station_]" ).each( function() {
-			var dur = $( this );
-			dur = parseInt( dur.val());
-			runtimes.push(dur);
+			var duration = $( this ),
+				stationId = parseInt( duration.attr( "id" ).split( "_" )[ 1 ].split( "-" )[ 0 ], 10 );
+			runtimes[ stationId ] = OSApp.Stations.isDisabled( stationId ) ? 0 : parseInt( duration.val(), 10 );
 		} );
 		var runtime = OSApp.Groups.calculateTotalRunningTime( runtimes );
 		var hours = Math.floor(runtime / 3600);
@@ -2307,7 +2313,7 @@ OSApp.Programs.makeProgram21 = function( n, isCopy ) {
 		var displayRuntime = "" + (hours/10>>0) + (hours%10);
 		displayRuntime += ":" + (minutes/10>>0) + (minutes%10);
 		displayRuntime += ":" + (seconds/10>>0) + (seconds%10);
-		page.find( "#station-head" ).text("Stations (Total Program Run Time: " + displayRuntime + ")");
+		page.find( "#station-head" ).text( OSApp.Language._( "Stations" ) + " (" + OSApp.Language._( "Total Program Run Time" ) + ": " + displayRuntime + ")" );
 	}
 
 	updateProgramTime();
@@ -2379,7 +2385,7 @@ OSApp.Programs.makeProgram21 = function( n, isCopy ) {
 	page.find( "#set-all" ).on( "click", function (){
 		OSApp.UIDom.showDurationBox( {
 			seconds: 60,
-			title: "Set Duration",
+			title: OSApp.Language._( "Set Duration" ),
 			incrementalUpdate: false,
 			callback: function( result ) {
 				page.find( "[id^=station_]" ).each( function() {
